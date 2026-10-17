@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dfadv",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dfadv",
+      "database_id": "8066b804-ee7d-4c6d-ab69-2d581754e39e",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "dunyam.xyz", "custom_domain": true },
+    { "pattern": "www.dunyam.xyz", "custom_domain": true }
+  ],
+  "observability": { "enabled": true }
+}

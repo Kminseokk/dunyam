@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>던전앤파이터 모험단 검색 사이트</title>
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,900|Roboto+Slab:400,700" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" />
+    <link rel="stylesheet" href="/css/aos.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/assets/css/material-dashboard.min.css" />
+    <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
+    <style>
+      .row-dealer { color: rgba(117, 152, 255, 1); }
+      .row-buffer { color: rgba(255, 113, 170, 0.81); }
+    </style>
+  </head>
+  <body>
+    <div class="site-mobile-menu site-navbar-target">
+      <div class="site-mobile-menu-header">
+        <div class="site-mobile-menu-close">
+          <span class="icofont-close js-menu-toggle"></span>
+        </div>
+      </div>
+      <div class="site-mobile-menu-body"></div>
+    </div>
+
+    <nav class="site-nav">
+      <div class="menu-bg-wrap">
+        <div class="site-navigation">
+          <a href="/" class="logo m-0 float-start">DUNYAM.XYZ</a>
+          <ul class="js-clone-nav d-none d-lg-inline-block text-start site-menu float-end">
+            <li class="active"><a href="/">메인 화면</a></li>
+            <li><a href="/rank">랭킹</a></li>
+            <li><a href="/data">분포 그래프(beta)</a></li>
+            <li><a href="/about">안내 사항</a></li>
+          </ul>
+          <a href="#" class="burger light me-auto float-end mt-1 site-menu-toggle js-menu-toggle d-inline-block d-lg-none">
+            <span></span>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="hero page-inner overlay" id="hero">
+      <div class="container">
+        <div class="row justify-content-center align-items-center">
+          <div class="col-lg-12 text-center mt-2">
+            <h1 class="heading" data-aos="fade-up" id="adventureName">모험단 이름</h1>
+            <h1 class="heading_re" data-aos="fade-up" id="repre_char">대표 캐릭터 정보가 없습니다.</h1>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="search_section">
+      <div class="col-md-12">
+        <div class="header-search">
+          <form id="char_searchForm">
+            <select class="input-select" name="server">
+              <option value="cain">카인</option>
+              <option value="diregie">디레지에</option>
+              <option value="siroco">시로코</option>
+              <option value="prey">프레이</option>
+              <option value="casillas">카시야스</option>
+              <option value="hilder">힐더</option>
+              <option value="anton">안톤</option>
+              <option value="bakal">바칼</option>
+            </select>
+            <input class="input" name="name" placeholder="캐릭터 이름을 입력해주세요. " maxlength="32" required />
+            <button class="search-btn" type="submit">SEARCH</button>
+          </form>
+        </div>
+      </div>
+      <div id="searchResultMessage"></div>
+      <div id="addButtonContainer" hidden>
+        <button id="addButton" type="button">추가하기</button>
+      </div>
+    </div>
+
+    <main class="main-content position-relative h-100 border-radius-lg">
+      <div class="container-fluid py-4">
+        <div class="row">
+          <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+            <div class="card">
+              <div class="card-header p-3 pt-2">
+                <div class="icon icon-lg icon-shape bg-gradient-dark shadow-dark text-center border-radius-xl mt-n4 position-absolute">
+                  <i class="material-icons opacity-10">weekend</i>
+                </div>
+                <div class="text-end pt-1">
+                  <p class="text-sm mb-0 text-capitalize">착용 중인 미스트기어 수</p>
+                  <h4 class="mb-0" id="mistGear_sum">N개</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+            <div class="card">
+              <div class="card-header p-3 pt-2">
+                <div class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute">
+                  <i class="material-icons opacity-10">person</i>
+                </div>
+                <div class="text-end pt-1">
+                  <p class="text-sm mb-0 text-capitalize">모험단 평균 명성</p>
+                  <h4 class="mb-0" id="fame_avg">NN,NNN</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+            <div class="card">
+              <div class="card-header p-3 pt-2">
+                <div class="icon icon-lg icon-shape bg-gradient-success shadow-success text-center border-radius-xl mt-n4 position-absolute">
+                  <i class="material-icons opacity-10">person</i>
+                </div>
+                <div class="text-end pt-1">
+                  <p class="text-sm mb-0 text-capitalize">모험단 명성 총합</p>
+                  <h4 class="mb-0" id="fame_sum">NN,NNN</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-sm-6">
+            <div class="card">
+              <div class="card-header p-3 pt-2">
+                <div class="icon icon-lg icon-shape bg-gradient-info shadow-info text-center border-radius-xl mt-n4 position-absolute">
+                  <i class="material-icons opacity-10">weekend</i>
+                </div>
+                <div class="text-end pt-1">
+                  <p class="text-sm mb-0 text-capitalize">어둑섬 클리어 수</p>
+                  <h4 class="mb-0" id="dark_land_sum">NN회</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col-lg-4 col-md-6 mt-4 mb-4">
+            <div class="card z-index-2">
+              <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2 bg-transparent">
+                <div class="bg-gradient-primary shadow-primary border-radius-lg py-3 pe-1">
+                  <div class="chart">
+                    <canvas id="chart-Variance-fame" class="chart-canvas" height="170"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body">
+                <h6 class="mb-0">변동 명성 변화 그래프</h6>
+                <p class="text-sm">퀸텀 카지노(익스)의 입장 명성을 기준으로 합니다.</p>
+                <hr class="dark horizontal" />
+                <p class="text-sm mb-0">
+                  <i class="fa fa-check text-info" aria-hidden="true"></i>
+                  <span class="font-weight-bold ms-1">변동 명성</span>은 상위 30%에 속하는 명성입니다.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 col-md-6 mt-4 mb-4">
+            <div class="card z-index-2">
+              <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2 bg-transparent">
+                <div class="bg-gradient-success shadow-success border-radius-lg py-3 pe-1">
+                  <div class="chart">
+                    <canvas id="chart-adv-total" class="chart-canvas" height="170"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body">
+                <h6 class="mb-0">모험단 명성 총합 1위</h6>
+                <p class="text-sm"><span class="font-weight-bolder">모험단 이름</span> 의 모험단이 1위 입니다. 추후 업데이트 예정입니다.</p>
+                <hr class="dark horizontal" />
+                <p class="text-sm mb-0">
+                  <i class="fa fa-check text-info" aria-hidden="true"></i>
+                  <span class="font-weight-bold ms-1">선계 장비 업그레이드</span>가 되지 않은 캐릭터는 집계되지 않습니다.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 mt-4 mb-3">
+            <div class="card z-index-2">
+              <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2 bg-transparent">
+                <div class="bg-gradient-dark shadow-dark border-radius-lg py-3 pe-1">
+                  <div class="chart">
+                    <canvas id="chart-adv-mean" class="chart-canvas" height="170"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body">
+                <h6 class="mb-0">모험단 명성 평균 1위</h6>
+                <p class="text-sm"><span class="font-weight-bolder">모험단 이름</span> 의 모험단이 1위 입니다. 추후 업데이트 예정입니다.</p>
+                <hr class="dark horizontal" />
+                <p class="text-sm mb-0">
+                  <i class="fa fa-check text-info" aria-hidden="true"></i>
+                  <span class="font-weight-bold ms-1">캐릭터의 수가 7개 이하</span>인 모험단은 집계되지 않습니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-lg-12 col-md-6 mb-md-0 mb-4">
+            <div class="card">
+              <div class="card-header pb-0">
+                <div class="row">
+                  <div class="col-lg-12 col-10">
+                    <h6>
+                      모험단 캐릭터 리스트
+                      <button class="dundam-update-btn" type="button" data-update="dundam">던담 업데이트</button>
+                      <button class="all-update-btn" type="button" data-update="refresh">업데이트</button>
+                      <span class="text-sm ms-2" id="updateProgress"></span>
+                    </h6>
+                    <p class="text-sm mb-0">
+                      <i class="fa fa-check text-info" aria-hidden="true"></i>
+                      <span class="font-weight-bold ms-1">스펙에 변화가 있다면</span> 업데이트를 눌러주세요. 해당 모험단의 캐릭터 전부 던담 정보를 제외한 정보가 업데이트 됩니다.
+                    </p>
+                    <p class="text-sm mb-0">
+                      <i class="fa fa-check text-info" aria-hidden="true"></i>
+                      <span class="font-weight-bold ms-1">업데이트 기능은</span> 시간이 소요 됩니다. 캐릭터가 많을수록 많은 시간이 요구됩니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-body px-0 pb-2">
+                <div class="table-responsive">
+                  <table class="table align-items-center mb-0">
+                    <thead>
+                      <tr>
+                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">서버</th>
+                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">캐릭터명</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">뿌리 직업</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">직업 명</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">성장 레벨</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">명성</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">던담 정보</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">미기 수</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">커스텀 수</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">시브</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">나비</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">오라</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">칭호</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">어둑섬 클수</th>
+                      </tr>
+                    </thead>
+                    <tbody id="characterRows"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="site-footer">
+        <div class="container">
+          <div class="row">
+            <div class="col-lg-4">
+              <div class="widget">
+                <h2>DUNYAM.xyz</h2>
+                <address>Design_By_Potion</address>
+                <ul class="list-unstyled links">
+                  <li><a href="mailto:highcw@naver.com">highcw@naver.com</a></li>
+                  <li>© 2024 dunyam.xyz All rights reserved.</li>
+                  <li>This site is not associated with NEXON Korea. Data sourced from NEOPLE OpenAPI.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div id="overlayer"></div>
+    <div class="loader">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <script src="/assets/js/chartjs.min.js"></script>
+    <script src="/js/aos.js"></script>
+    <script src="/js/navbar.js"></script>
+    <script src="/js/custom.js"></script>
+    <script src="/js/properties.js"></script>
+  </body>
+</html>

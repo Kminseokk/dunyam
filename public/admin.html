@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>던전앤파이터 모험단 검색 사이트</title>
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="/css/aos.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="site-mobile-menu site-navbar-target">
+      <div class="site-mobile-menu-header">
+        <div class="site-mobile-menu-close">
+          <span class="icofont-close js-menu-toggle"></span>
+        </div>
+      </div>
+      <div class="site-mobile-menu-body"></div>
+    </div>
+
+    <nav class="site-nav">
+      <div class="menu-bg-wrap">
+        <div class="site-navigation">
+          <a href="/" class="logo m-0 float-start">DUNYAM.XYZ</a>
+          <ul class="js-clone-nav d-none d-lg-inline-block text-start site-menu float-end">
+            <li class="active"><a href="/">메인 화면</a></li>
+            <li><a href="/rank">랭킹</a></li>
+            <li><a href="/data">분포 그래프(beta)</a></li>
+            <li><a href="/about">안내 사항</a></li>
+          </ul>
+          <a href="#" class="burger light me-auto float-end mt-1 site-menu-toggle js-menu-toggle d-inline-block d-lg-none">
+            <span></span>
+          </a>
+        </div>
+      </div>
+    </nav>
+    <div class="wait_hero page-inner overlay" style="background-image: url('/image_set/wait_page.jpg')"></div>
+
+    <div class="section">
+      <div class="container">
+        <div class="row text-center">
+          <div class="col-12">
+            <h2 class="font-weight-bold heading text-primary mb-4">해당 페이지는 알고리즘 및 테스트에 대한 설명입니다.</h2>
+          </div>
+          <div class="col-lg">**해당 페이지는 '/admin' 주소 입력을 통해서만 볼 수 있습니다.**</div>
+
+          <div class="col-12">
+            <br />
+            <button data-toggle-target="imageContainer1" class="btn btn-primary mb-4">알고리즘 보기</button>
+          </div>
+          <div id="imageContainer1" hidden>
+            <div class="col-12">
+              <img src="/flowchart1.png" alt="플로우차트1" style="width: 55%; display: block; margin: 0 auto" />
+            </div>
+            <div class="col-12">
+              <img src="/flowchart2.png" alt="플로우차트2" style="width: 50%; display: block; margin: 0 auto" />
+            </div>
+          </div>
+
+          <div class="col-12">
+            <br />
+            <button data-toggle-target="imageContainer2" class="btn btn-primary mb-4">테스트 방법</button>
+          </div>
+          <div id="imageContainer2" hidden>
+            <div class="col-lg">
+              1. 메인 페이지에서 '난새' 모험단을 검색해주세요. <br />
+              2. 하단의 난새 모험단의 캐릭터들 이름을 입력해서 테스트할 수 있습니다.<br /><br />
+            </div>
+            <div class="col-12">
+              <img src="/chalist.png" alt="캐릭터 리스트" style="width: 70%; display: block; margin: 0 auto" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.querySelectorAll('[data-toggle-target]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var target = document.getElementById(button.dataset.toggleTarget);
+          target.hidden = !target.hidden;
+        });
+      });
+    </script>
+    <div class="site-footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4">
+            <div class="widget">
+              <h2>DUNYAM.xyz</h2>
+              <address>Design_By_Potion</address>
+              <ul class="list-unstyled links">
+                <li><a href="mailto:highcw@naver.com">highcw@naver.com</a></li>
+                <li>© 2024 dunyam.xyz All rights reserved.</li>
+                <li>This site is not associated with NEXON Korea. Data sourced from NEOPLE OpenAPI.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="overlayer"></div>
+    <div class="loader">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <script src="/js/aos.js"></script>
+    <script src="/js/navbar.js"></script>
+    <script src="/js/custom.js"></script>
+  </body>
+</html>
