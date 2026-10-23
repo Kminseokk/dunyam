@@ -54,20 +54,24 @@ async function deleteCharacter(db: D1Database, adventure: string, uid: string) {
 }
 
 // 집계 API 응답을 Cloudflare 엣지에 캐시. 방문자 수와 관계없이 DB는 ttl 마다 한 번만 읽는다.
-// (엣지 캐시는 ttl, 브라우저 캐시는 최대 60초)
+// (엣지 캐시는 ttl, 브라우저 캐시는 60초)
+// 캐시에서 꺼낸 응답을 그대로 돌려주면 도메인의 브라우저 캐시 TTL(기본 4시간)로 덮어써지므로 새 응답으로 감싼다.
 async function edgeCached(request: Request, ctx: ExecutionContext, ttl: number, produce: () => Promise<Response>) {
   const cache = caches.default;
+  const headers = { 'Content-Type': 'application/json; charset=utf-8' };
+  const toClient = (body: string) =>
+    new Response(body, { headers: { ...headers, 'Cache-Control': `public, max-age=${Math.min(ttl, 60)}` } });
+
   const hit = await cache.match(request);
-  if (hit) return hit;
+  if (hit) return toClient(await hit.text());
 
   const res = await produce();
   if (!res.ok) return res;
   const body = await res.text();
-  const headers = { 'Content-Type': 'application/json; charset=utf-8' };
   ctx.waitUntil(
     cache.put(request, new Response(body, { headers: { ...headers, 'Cache-Control': `public, max-age=${ttl}` } })),
   );
-  return new Response(body, { headers: { ...headers, 'Cache-Control': `public, max-age=${Math.min(ttl, 60)}` } });
+  return toClient(body);
 }
 
 const RANKING_TTL = 300;
