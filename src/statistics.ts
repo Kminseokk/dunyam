@@ -42,5 +42,5 @@ export async function getStatistics(db: D1Database, type: StatType) {
   keys.forEach((key, i) => {
     data[key] = key === 'summary' ? results[i].results[0] : results[i].results;
   });
-  return Response.json(data, { headers: { 'Cache-Control': 'public, max-age=300' } });
+  return Response.json(data);
 }

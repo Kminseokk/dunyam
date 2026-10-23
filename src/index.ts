@@ -1,7 +1,7 @@
 import { getDundamValue } from './dundam';
 import { CharacterBase, CharacterDetail, NeopleError, getCharacter, getCharacterDetail, searchCharacters } from './neople';
 import { MIN_FAME } from './rules';
-import { RANK_TYPES, RankType, getRanking, rankingQuery } from './ranking';
+import { RANK_TYPES, RankType, getRanking, rankingQuery, refreshAdventureStatements } from './ranking';
 import { STAT_TYPES, StatType, getStatistics } from './statistics';
 
 interface Env {
@@ -24,8 +24,9 @@ function text(body: Record<string, unknown>, key: string, max = 32) {
   return value;
 }
 
-async function upsert(db: D1Database, adventure: string, c: CharacterDetail) {
-  await db
+// 캐릭터 저장 + 모험단 요약 갱신을 한 batch(트랜잭션)로 실행
+async function saveCharacter(db: D1Database, adventure: string, c: CharacterDetail) {
+  const upsert = db
     .prepare(
       `INSERT INTO characters (
         adventure_name, character_uid, server_id, character_name, job_id, job_grow_id, job_name, job_grow_name,
@@ -43,8 +44,40 @@ async function upsert(db: D1Database, adventure: string, c: CharacterDetail) {
     .bind(
       adventure, c.characterId, c.serverId, c.characterName, c.jobId, c.jobGrowId, c.jobName, c.jobGrowName,
       c.itemLevelSum, c.fame, c.enchant, c.queenCreature, c.fashionistaAurora, c.title, c.mikaelaHardCount,
-    )
-    .run();
+    );
+  await db.batch([upsert, ...refreshAdventureStatements(db, adventure)]);
+}
+
+async function deleteCharacter(db: D1Database, adventure: string, uid: string) {
+  const del = db.prepare(`DELETE FROM characters WHERE adventure_name = ?1 AND character_uid = ?2`).bind(adventure, uid);
+  await db.batch([del, ...refreshAdventureStatements(db, adventure)]);
+}
+
+// 집계 API 응답을 Cloudflare 엣지에 캐시. 방문자 수와 관계없이 DB는 ttl 마다 한 번만 읽는다.
+// (엣지 캐시는 ttl, 브라우저 캐시는 최대 60초)
+async function edgeCached(request: Request, ctx: ExecutionContext, ttl: number, produce: () => Promise<Response>) {
+  const cache = caches.default;
+  const hit = await cache.match(request);
+  if (hit) return hit;
+
+  const res = await produce();
+  if (!res.ok) return res;
+  const body = await res.text();
+  const headers = { 'Content-Type': 'application/json; charset=utf-8' };
+  ctx.waitUntil(
+    cache.put(request, new Response(body, { headers: { ...headers, 'Cache-Control': `public, max-age=${ttl}` } })),
+  );
+  return new Response(body, { headers: { ...headers, 'Cache-Control': `public, max-age=${Math.min(ttl, 60)}` } });
+}
+
+const RANKING_TTL = 300;
+const STATISTICS_TTL = 3600;
+
+// 캐릭터가 바뀌면 이 데이터센터의 명예의 전당·랭킹 캐시를 비움 (다른 데이터센터는 ttl 후 갱신)
+function purgeRankingCache(request: Request, ctx: ExecutionContext) {
+  const origin = new URL(request.url).origin;
+  const urls = [`${origin}/api/highlights`, ...RANK_TYPES.map((t) => `${origin}/api/ranking?type=${t}`)];
+  ctx.waitUntil(Promise.all(urls.map((u) => caches.default.delete(new Request(u)))));
 }
 
 // 이름으로 캐릭터를 찾아 해당 모험단 소속인 캐릭터를 반환.
@@ -131,25 +164,24 @@ async function getHighlights(env: Env) {
   const results = await env.DB.batch(keys.map((key) => env.DB.prepare(queries[key])));
   const highlights = Object.fromEntries(keys.map((key, i) => [key, results[i].results[0] ?? null]));
 
-  return Response.json(
-    { ok: true, ...highlights },
-    { headers: { 'Cache-Control': 'public, max-age=60' } },
-  );
+  return Response.json({ ok: true, ...highlights });
 }
 
-async function api(request: Request, env: Env, path: string) {
-  if (request.method === 'GET' && path === '/api/highlights') return getHighlights(env);
+async function api(request: Request, env: Env, path: string, ctx: ExecutionContext) {
+  if (request.method === 'GET' && path === '/api/highlights') {
+    return edgeCached(request, ctx, RANKING_TTL, () => getHighlights(env));
+  }
 
   if (request.method === 'GET' && path === '/api/ranking') {
     const type = new URL(request.url).searchParams.get('type') as RankType;
     if (!RANK_TYPES.includes(type)) throw new BadRequest('type 값이 올바르지 않습니다.');
-    return getRanking(env.DB, type);
+    return edgeCached(request, ctx, RANKING_TTL, () => getRanking(env.DB, type));
   }
 
   if (request.method === 'GET' && path === '/api/statistics') {
     const type = new URL(request.url).searchParams.get('type') as StatType;
     if (!STAT_TYPES.includes(type)) throw new BadRequest('type 값이 올바르지 않습니다.');
-    return getStatistics(env.DB, type);
+    return edgeCached(request, ctx, STATISTICS_TTL, () => getStatistics(env.DB, type));
   }
 
   if (request.method === 'GET' && path === '/api/adventure') {
@@ -174,7 +206,8 @@ async function api(request: Request, env: Env, path: string) {
       const member = await findMember(env, adventure, text(body, 'name'));
       const error = registrationError(member);
       if (error || !member) return json({ ok: false, message: error });
-      await upsert(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, member));
+      await saveCharacter(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, member));
+      purgeRankingCache(request, ctx);
       return json({ ok: true });
     }
 
@@ -193,13 +226,13 @@ async function api(request: Request, env: Env, path: string) {
         base = await getCharacter(env.NEOPLE_API_KEY, row.server_id, uid);
       } catch (e) {
         if (!(e instanceof NeopleError && e.status === 404)) throw e;
-        await env.DB.prepare(`DELETE FROM characters WHERE adventure_name = ?1 AND character_uid = ?2`)
-          .bind(adventure, uid)
-          .run();
+        await deleteCharacter(env.DB, adventure, uid);
+        purgeRankingCache(request, ctx);
         return json({ ok: true, deleted: true });
       }
       if (base.adventureName !== adventure) return json({ ok: false, message: '모험단이 변경된 캐릭터입니다.' });
-      await upsert(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, base));
+      await saveCharacter(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, base));
+      purgeRankingCache(request, ctx);
       return json({ ok: true });
     }
 
@@ -218,6 +251,7 @@ async function api(request: Request, env: Env, path: string) {
       await env.DB.prepare(`UPDATE characters SET dundam = ?1 WHERE adventure_name = ?2 AND character_uid = ?3`)
         .bind(value, adventure, uid)
         .run();
+      purgeRankingCache(request, ctx); // 명예의 전당 최고 버퍼
       return json({ ok: true, value });
     }
   }
@@ -225,12 +259,12 @@ async function api(request: Request, env: Env, path: string) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
       try {
-        return await api(request, env, url.pathname);
+        return await api(request, env, url.pathname, ctx);
       } catch (e) {
         if (e instanceof BadRequest) return fail(e.message);
         console.error(e);
