@@ -1,6 +1,8 @@
 import { getDundamValue } from './dundam';
-import { CharacterDetail, NeopleError, getCharacter, getCharacterDetail, searchCharacter } from './neople';
-import { SERVERS } from './rules';
+import { CharacterBase, CharacterDetail, NeopleError, getCharacter, getCharacterDetail, searchCharacters } from './neople';
+import { MIN_FAME } from './rules';
+import { RANK_TYPES, RankType, getRanking, rankingQuery } from './ranking';
+import { STAT_TYPES, StatType, getStatistics } from './statistics';
 
 interface Env {
   DB: D1Database;
@@ -9,6 +11,7 @@ interface Env {
 }
 
 const FALLBACK_IMAGE = '/image_class/20240111_update_2.webp';
+const COMING_SOON = ['/calculator', '/enhance', '/amplify', '/guild'];
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 const fail = (message: string, status = 400) => json({ ok: false, message }, status);
@@ -21,44 +24,64 @@ function text(body: Record<string, unknown>, key: string, max = 32) {
   return value;
 }
 
-function serverId(body: Record<string, unknown>) {
-  const id = text(body, 'server');
-  if (!(id in SERVERS)) throw new BadRequest('server 값이 올바르지 않습니다.');
-  return id;
-}
-
 async function upsert(db: D1Database, adventure: string, c: CharacterDetail) {
   await db
     .prepare(
       `INSERT INTO characters (
         adventure_name, character_uid, server_id, character_name, job_id, job_grow_id, job_name, job_grow_name,
-        item_level_sum, fame, mist_gear_count, custom_epic_count, enchant, queen_creature, fashionista_aurora,
-        title, dark_land_count
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+        item_level_sum, fame, enchant, queen_creature, fashionista_aurora, title, mikaela_hard_count
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
       ON CONFLICT (adventure_name, character_uid) DO UPDATE SET
         server_id = excluded.server_id, character_name = excluded.character_name,
         job_id = excluded.job_id, job_grow_id = excluded.job_grow_id,
         job_name = excluded.job_name, job_grow_name = excluded.job_grow_name,
         item_level_sum = excluded.item_level_sum, fame = excluded.fame,
-        mist_gear_count = excluded.mist_gear_count, custom_epic_count = excluded.custom_epic_count,
         enchant = excluded.enchant, queen_creature = excluded.queen_creature,
         fashionista_aurora = excluded.fashionista_aurora, title = excluded.title,
-        dark_land_count = excluded.dark_land_count, updated_at = CURRENT_TIMESTAMP`,
+        mikaela_hard_count = excluded.mikaela_hard_count, updated_at = CURRENT_TIMESTAMP`,
     )
     .bind(
       adventure, c.characterId, c.serverId, c.characterName, c.jobId, c.jobGrowId, c.jobName, c.jobGrowName,
-      c.itemLevelSum, c.fame, c.mistGearCount, c.customEpicCount, c.enchant, c.queenCreature,
-      c.fashionistaAurora, c.title, c.darkLandCount,
+      c.itemLevelSum, c.fame, c.enchant, c.queenCreature, c.fashionistaAurora, c.title, c.mikaelaHardCount,
     )
     .run();
 }
 
-// 이름으로 캐릭터를 찾고, 해당 모험단 소속인지 확인
-async function findMember(env: Env, adventure: string, server: string, name: string) {
-  const found = await searchCharacter(env.NEOPLE_API_KEY, server, name);
-  if (!found) return null;
-  const base = await getCharacter(env.NEOPLE_API_KEY, server, found.characterId);
-  return base.adventureName === adventure ? base : null;
+// 이름으로 캐릭터를 찾아 해당 모험단 소속인 캐릭터를 반환.
+// 이미 등록된 캐릭터들의 서버를 먼저 찾고(보통 2회 호출), 없을 때만 전 서버를 검색한다.
+async function findMember(env: Env, adventure: string, name: string) {
+  const key = env.NEOPLE_API_KEY;
+  const { results } = await env.DB.prepare(
+    `SELECT server_id FROM characters WHERE adventure_name = ?1 GROUP BY server_id ORDER BY COUNT(*) DESC`,
+  )
+    .bind(adventure)
+    .all<{ server_id: string }>();
+  const knownServers = results.map((r) => r.server_id);
+
+  // 모험단 이름은 전 서버에서 유일하므로 소속 캐릭터는 최대 1명
+  const pickMember = async (found: CharacterBase[]) => {
+    const candidates = await Promise.all(found.map((c) => getCharacter(key, c.serverId, c.characterId)));
+    return candidates.find((c) => c.adventureName === adventure) ?? null;
+  };
+
+  if (knownServers.length) {
+    const found = (await Promise.all(knownServers.map((s) => searchCharacters(key, s, name)))).flat();
+    const member = await pickMember(found);
+    if (member) return member;
+  }
+
+  // 등록된 서버에 없으면 전 서버 검색 (이미 확인한 서버는 제외)
+  const found = await searchCharacters(key, 'all', name);
+  return pickMember(found.filter((c) => !knownServers.includes(c.serverId)));
+}
+
+// 등록 가능 여부. 불가능하면 사유 메시지를 반환
+function registrationError(member: CharacterBase | null) {
+  if (!member) return '해당 모험단에 속한 캐릭터가 아닙니다.';
+  if ((member.fame ?? 0) < MIN_FAME) {
+    return `명성 ${MIN_FAME.toLocaleString()} 이상인 캐릭터만 등록할 수 있습니다. (현재 ${(member.fame ?? 0).toLocaleString()})`;
+  }
+  return null;
 }
 
 async function representativeImage(env: Env, request: Request, jobId?: string, jobGrowId?: string) {
@@ -87,12 +110,48 @@ async function getAdventure(env: Env, request: Request, adventure: string) {
     imagePath: await representativeImage(env, request, top?.job_id, top?.job_grow_id),
     fameSum,
     fameAvg: results.length ? Math.round(fameSum / results.length) : 0,
-    darkLandSum: sum('dark_land_count'),
-    mistGearSum: sum('mist_gear_count'),
+    mikaelaHardSum: sum('mikaela_hard_count'),
   });
 }
 
+// 메인 화면 업적 카드: 저장된 전체 캐릭터 기준 1위
+async function getHighlights(env: Env) {
+  const character = `SELECT adventure_name, character_name, server_id, job_grow_name, fame, dundam FROM characters`;
+  const queries = {
+    topFame: `${character} ORDER BY fame DESC LIMIT 1`,
+    // 모험단 기준 카드는 랭킹 페이지와 같은 쿼리의 1위
+    topFameSum: rankingQuery('fame-sum', 1),
+    topFameAvg: rankingQuery('fame-avg', 1),
+    topMikaela: rankingQuery('mikaela', 1),
+    topBuffer: `${character} WHERE dundam LIKE '%만'
+      ORDER BY CAST(REPLACE(dundam, '만', '') AS INTEGER) DESC LIMIT 1`,
+    topCount: rankingQuery('count', 1),
+  };
+  const keys = Object.keys(queries) as (keyof typeof queries)[];
+  const results = await env.DB.batch(keys.map((key) => env.DB.prepare(queries[key])));
+  const highlights = Object.fromEntries(keys.map((key, i) => [key, results[i].results[0] ?? null]));
+
+  return Response.json(
+    { ok: true, ...highlights },
+    { headers: { 'Cache-Control': 'public, max-age=60' } },
+  );
+}
+
 async function api(request: Request, env: Env, path: string) {
+  if (request.method === 'GET' && path === '/api/highlights') return getHighlights(env);
+
+  if (request.method === 'GET' && path === '/api/ranking') {
+    const type = new URL(request.url).searchParams.get('type') as RankType;
+    if (!RANK_TYPES.includes(type)) throw new BadRequest('type 값이 올바르지 않습니다.');
+    return getRanking(env.DB, type);
+  }
+
+  if (request.method === 'GET' && path === '/api/statistics') {
+    const type = new URL(request.url).searchParams.get('type') as StatType;
+    if (!STAT_TYPES.includes(type)) throw new BadRequest('type 값이 올바르지 않습니다.');
+    return getStatistics(env.DB, type);
+  }
+
   if (request.method === 'GET' && path === '/api/adventure') {
     const adventure = text({ name: new URL(request.url).searchParams.get('name') }, 'name');
     return getAdventure(env, request, adventure);
@@ -105,14 +164,16 @@ async function api(request: Request, env: Env, path: string) {
   switch (path) {
     // 캐릭터가 모험단 소속인지 확인
     case '/api/check': {
-      const member = await findMember(env, adventure, serverId(body), text(body, 'name'));
-      return json({ ok: !!member });
+      const member = await findMember(env, adventure, text(body, 'name'));
+      const error = registrationError(member);
+      return json(error ? { ok: false, message: error } : { ok: true, server: member?.serverId });
     }
 
     // 모험단에 캐릭터 추가
     case '/api/save': {
-      const member = await findMember(env, adventure, serverId(body), text(body, 'name'));
-      if (!member) return json({ ok: false, message: '해당 모험단에 속한 캐릭터가 아닙니다.' });
+      const member = await findMember(env, adventure, text(body, 'name'));
+      const error = registrationError(member);
+      if (error || !member) return json({ ok: false, message: error });
       await upsert(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, member));
       return json({ ok: true });
     }
@@ -177,9 +238,22 @@ export default {
       }
     }
 
-    // 준비 중인 페이지
-    if (url.pathname === '/rank' || url.pathname === '/data') {
+    // 준비 중인 페이지 (실제 페이지를 만들면 여기서 빼고 public/ 에 HTML 추가)
+    if (COMING_SOON.includes(url.pathname)) {
       return env.ASSETS.fetch(new Request(new URL('/wait', url), request));
+    }
+
+    // 탭 페이지: /<페이지>/<탭> 은 모두 같은 HTML, /<페이지> 는 첫 탭으로
+    const tabPages: Record<string, readonly string[]> = { rank: RANK_TYPES, statistics: STAT_TYPES };
+    if (url.pathname === '/data') {
+      return Response.redirect(new URL(`/statistics/${STAT_TYPES[0]}`, url).toString(), 301);
+    }
+    const [, page, tab] = url.pathname.match(/^\/(rank|statistics)(?:\/([a-z-]*))?\/?$/) ?? [];
+    if (page && !tab) {
+      return Response.redirect(new URL(`/${page}/${tabPages[page][0]}`, url).toString(), 301);
+    }
+    if (page && tabPages[page].includes(tab)) {
+      return env.ASSETS.fetch(new Request(new URL(`/${page}`, url), request));
     }
 
     return env.ASSETS.fetch(request);

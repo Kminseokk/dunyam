@@ -9911,17 +9911,19 @@ textarea {
 
 
 .site-footer {
-  background: #efefef;
+  background: #000;
   font-size: 14px;
-  color: #888;
+  color: #fff;
   padding: 25px 0; }
+  .site-footer h2, .site-footer .h2, .site-footer address {
+    color: #fff; }
   .site-footer a {
-    color: #777;
+    color: #fff;
     position: relative;
     display: inline-block;
     text-decoration: underline; }
     .site-footer a:hover {
-      color: #000;
+      color: #ccc;
       text-decoration: none; }
       .site-footer a:hover:before {
         background: #00204a; }
@@ -9969,14 +9971,10 @@ textarea {
   transform: translateX(-50%);
   }
 
-.header-search form .input-select {
+.header-search form .input {
+  width: calc(70% - 150px);
   margin-right: -4px;
   border-radius: 10px 0px 0px 10px;
-}
-
-.header-search form .input {
-  width: calc(70% - 260px);
-  margin-right: -4px;
 }
 
 .header-search form .search-btn {
@@ -9994,13 +9992,6 @@ textarea {
   border: 1px solid #000;
   background-color: #FFF;
   width: 100%;
-}
-
-.input-select {
-  padding: 0px 15px;
-  background: #FFF;
-  border: 2px solid #000;
-  height: 40px;
 }
 
 /*----------------------------*\

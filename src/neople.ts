@@ -1,10 +1,7 @@
 import {
   AWAKENING_TITLES,
-  CUSTOM_EPICS,
-  DARK_LAND_REGION,
-  DARK_LAND_START,
   FASHIONISTA_AURORAS,
-  MIST_GEAR_SET,
+  MIKAELA_RAID,
   QUEEN_CREATURES,
   containsAny,
 } from './rules';
@@ -31,13 +28,11 @@ export interface CharacterBase {
 
 export interface CharacterDetail extends CharacterBase {
   itemLevelSum: number;
-  mistGearCount: number;
-  customEpicCount: number;
   enchant: 'Y' | 'N';
   title: 'Y' | 'N';
   queenCreature: 'Y' | 'N';
   fashionistaAurora: 'Y' | 'N';
-  darkLandCount: number | null;
+  mikaelaHardCount: number | null;
 }
 
 async function call<T>(apiKey: string, path: string, params: Record<string, string> = {}): Promise<T> {
@@ -51,11 +46,13 @@ async function call<T>(apiKey: string, path: string, params: Record<string, stri
 
 const enc = encodeURIComponent;
 
-export async function searchCharacter(apiKey: string, serverId: string, name: string) {
+// 이름이 정확히 일치하는 캐릭터 검색. serverId 'all'이면 전 서버 (서버당 최대 1명)
+export async function searchCharacters(apiKey: string, serverId: string, name: string) {
   const data = await call<{ rows: CharacterBase[] }>(apiKey, `/servers/${enc(serverId)}/characters`, {
     characterName: name,
+    limit: '20',
   });
-  return data.rows[0] ?? null;
+  return data.rows;
 }
 
 export function getCharacter(apiKey: string, serverId: string, characterId: string) {
@@ -65,19 +62,14 @@ export function getCharacter(apiKey: string, serverId: string, characterId: stri
 interface Equipment {
   slotId: string;
   itemName: string;
-  setItemName?: string | null;
   enchant?: { status?: { name: string; value: number | string }[] } | null;
   fixedOption?: { level?: number };
   customOption?: { level?: number };
 }
 
 function summarizeEquipment(equipment: Equipment[]) {
-  let customEpicCount = 0;
-  let mistGearCount = 0;
   let itemLevelSum = 0;
   for (const item of equipment) {
-    customEpicCount += CUSTOM_EPICS.filter((name) => item.itemName.includes(name)).length;
-    if (item.setItemName?.includes(MIST_GEAR_SET)) mistGearCount++;
     // 선계(仙) 업그레이드된 장비의 성장 레벨만 합산
     if (item.itemName.includes('仙')) {
       itemLevelSum += item.fixedOption?.level ?? item.customOption?.level ?? 0;
@@ -89,32 +81,42 @@ function summarizeEquipment(equipment: Equipment[]) {
   const title = equipment.find((item) => item.slotId === 'TITLE')?.itemName;
 
   return {
-    customEpicCount,
-    mistGearCount,
     itemLevelSum,
     enchant: hasSiv ? 'Y' : 'N',
     title: containsAny(title, AWAKENING_TITLES) ? 'Y' : 'N',
   } as const;
 }
 
-// 타임라인 API는 조회 기간이 최대 90일이라 그 안에서만 집계한다.
+// 타임라인 API는 조회 기간이 최대 90일이라 최근 90일만 집계한다.
 function timelineRange() {
   const kst = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString();
   const fmt = (iso: string) => iso.slice(0, 16).replace(/[-:]/g, '');
   const now = new Date();
-  const end = fmt(kst(now));
-  const start = fmt(kst(new Date(now.getTime() - 89 * 86400_000)));
-  return { startDate: start > DARK_LAND_START ? start : DARK_LAND_START, endDate: end };
+  return { startDate: fmt(kst(new Date(now.getTime() - 89 * 86400_000))), endDate: fmt(kst(now)) };
 }
 
-async function countDarkLand(apiKey: string, serverId: string, characterId: string) {
+interface RaidTimeline {
+  timeline: { next: string | null; rows: { data: { raidName?: string; hard?: boolean } }[] };
+}
+
+const TIMELINE_MAX_PAGES = 3;
+
+async function countMikaelaHard(apiKey: string, serverId: string, characterId: string) {
+  const path = `/servers/${enc(serverId)}/characters/${enc(characterId)}/timeline`;
   try {
-    const data = await call<{ timeline: { rows: { data: { regionName?: string } }[] } }>(
-      apiKey,
-      `/servers/${enc(serverId)}/characters/${enc(characterId)}/timeline`,
-      { limit: '50', code: '209', ...timelineRange() },
-    );
-    return data.timeline.rows.filter((row) => row.data.regionName === DARK_LAND_REGION).length;
+    let count = 0;
+    let next: string | null = null;
+    for (let page = 0; page < TIMELINE_MAX_PAGES; page++) {
+      const data: RaidTimeline = await call<RaidTimeline>(
+        apiKey,
+        path,
+        next ? { next } : { limit: '100', code: '201,210', ...timelineRange() },
+      );
+      count += data.timeline.rows.filter((row) => row.data.raidName === MIKAELA_RAID && row.data.hard).length;
+      next = data.timeline.next;
+      if (!next) break;
+    }
+    return count;
   } catch (e) {
     console.error('timeline', e);
     return null;
@@ -123,11 +125,11 @@ async function countDarkLand(apiKey: string, serverId: string, characterId: stri
 
 export async function getCharacterDetail(apiKey: string, base: CharacterBase): Promise<CharacterDetail> {
   const path = `/servers/${enc(base.serverId)}/characters/${enc(base.characterId)}`;
-  const [equip, avatar, creature, darkLandCount] = await Promise.all([
+  const [equip, avatar, creature, mikaelaHardCount] = await Promise.all([
     call<{ equipment?: Equipment[] }>(apiKey, `${path}/equip/equipment`),
     call<{ avatar?: { slotId: string; itemName: string }[] }>(apiKey, `${path}/equip/avatar`),
     call<{ creature?: { itemName: string } | null }>(apiKey, `${path}/equip/creature`),
-    countDarkLand(apiKey, base.serverId, base.characterId),
+    countMikaelaHard(apiKey, base.serverId, base.characterId),
   ]);
 
   const aurora = avatar.avatar?.find((a) => a.slotId === 'AURORA')?.itemName;
@@ -137,6 +139,6 @@ export async function getCharacterDetail(apiKey: string, base: CharacterBase): P
     ...summarizeEquipment(equip.equipment ?? []),
     queenCreature: containsAny(creature.creature?.itemName, QUEEN_CREATURES) ? 'Y' : 'N',
     fashionistaAurora: containsAny(aurora, FASHIONISTA_AURORAS) ? 'Y' : 'N',
-    darkLandCount,
+    mikaelaHardCount,
   };
 }

@@ -1,0 +1,72 @@
+/* 상단 헤더: 1줄 로고, 2줄 메뉴 */
+.dy-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #111;
+  font-family: "Work Sans", sans-serif; }
+  .dy-header .dy-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px; }
+  .dy-header .dy-header-top {
+    border-bottom: 1px solid #2a2a2a; }
+    .dy-header .dy-header-top .dy-container {
+      display: flex;
+      align-items: center;
+      height: 64px; }
+  .dy-header .dy-logo {
+    color: #fff;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    text-decoration: none; }
+    .dy-header .dy-logo span {
+      font-size: 15px;
+      font-weight: 600;
+      color: #8fb4ff;
+      margin-left: 2px; }
+  .dy-header .dy-header-menu {
+    border-bottom: 1px solid #2a2a2a; }
+    .dy-header .dy-header-menu ul {
+      display: flex;
+      gap: 28px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      overflow-x: auto;
+      scrollbar-width: none; }
+      .dy-header .dy-header-menu ul::-webkit-scrollbar {
+        display: none; }
+    .dy-header .dy-header-menu a {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 48px;
+      color: #aaa;
+      font-size: 15px;
+      font-weight: 500;
+      white-space: nowrap;
+      text-decoration: none; }
+      .dy-header .dy-header-menu a:hover {
+        color: #fff; }
+      .dy-header .dy-header-menu a.active {
+        color: #fff;
+        font-weight: 700; }
+        .dy-header .dy-header-menu a.active::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 3px;
+          background: #fff; }
+  .dy-header .dy-badge {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4; }

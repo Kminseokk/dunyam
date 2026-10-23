@@ -1,0 +1,107 @@
+/* 통계 페이지 (어두운 패널) */
+body {
+  background: #000; }
+.stats {
+  background: #16181d;
+  padding: 32px 16px 56px;
+  color: #e6e6e6; }
+  .stats .stats-panel {
+    max-width: 1150px;
+    margin: 0 auto;
+    padding: 32px;
+    border-radius: 12px;
+    background: #1d2027; }
+
+  /* 탭 */
+  .stats .stats-tabs {
+    display: inline-flex;
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid #3a3f4a;
+    border-radius: 6px;
+    scrollbar-width: none; }
+    .stats .stats-tabs a {
+      padding: 10px 16px;
+      color: #c8c8c8;
+      font-size: 14px;
+      white-space: nowrap;
+      text-decoration: none; }
+      .stats .stats-tabs a + a {
+        border-left: 1px solid #3a3f4a; }
+      .stats .stats-tabs a:hover {
+        color: #fff; }
+      .stats .stats-tabs a.active {
+        background: #e6e6e6;
+        color: #111;
+        font-weight: 600; }
+
+  /* 요약 */
+  .stats .stats-summary {
+    margin: 32px 0 24px; }
+  .stats .stats-title {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff; }
+  .stats .stats-value {
+    margin: 0;
+    color: #bbb; }
+    .stats .stats-value strong {
+      font-size: 36px;
+      font-weight: 700;
+      color: #4a90ff; }
+  .stats .stats-sub {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #8a8f98; }
+
+  /* 차트 */
+  .stats .stats-chart {
+    position: relative;
+    height: 340px;
+    margin-bottom: 32px; }
+
+  /* 표 */
+  .stats .stats-table-title {
+    margin: 32px 0 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff; }
+  .stats .stats-table-wrap {
+    overflow-x: auto; }
+  .stats table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px; }
+    .stats table th {
+      padding: 10px 12px;
+      background: #2a2e37;
+      color: #fff;
+      font-weight: 600;
+      white-space: nowrap; }
+    .stats table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #2d313a;
+      color: #ddd;
+      white-space: nowrap; }
+    .stats table th:not(:first-child),
+    .stats table td:not(:first-child) {
+      text-align: right; }
+  .stats table.rank-table th:nth-child(2), .stats table.rank-table td:nth-child(2),
+  .stats table.rank-table th:nth-child(5), .stats table.rank-table td:nth-child(5) {
+    text-align: left; }
+  .stats .rank-link {
+    color: inherit;
+    text-decoration: none; }
+    .stats .rank-link:hover {
+      color: #4a90ff;
+      text-decoration: underline; }
+  .stats .stats-empty {
+    padding: 40px 0;
+    text-align: center;
+    color: #8a8f98; }
+
+@media (max-width: 575px) {
+  .stats .stats-panel { padding: 20px 16px; }
+  .stats .stats-chart { height: 260px; }
+  .stats .stats-value strong { font-size: 30px; } }

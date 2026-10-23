@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>랭킹 - 던전앤파이터 모험단 검색 사이트</title>
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="/css/aos.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/statistics.css" />
+  </head>
+  <body>
+    <header id="site-header" class="dy-header"></header>
+    <script src="/js/header.js"></script>
+
+    <main class="stats">
+      <div class="stats-panel">
+        <nav class="stats-tabs" aria-label="랭킹 종류">
+          <a href="/rank/fame-sum" data-tab="fame-sum">명성 총합</a>
+          <a href="/rank/fame-avg" data-tab="fame-avg">명성 평균</a>
+          <a href="/rank/count" data-tab="count">최다 등록</a>
+          <a href="/rank/mikaela" data-tab="mikaela">미카엘라 하드</a>
+        </nav>
+
+        <section class="stats-summary">
+          <h1 class="stats-title" id="statsTitle">랭킹</h1>
+          <p class="stats-value"><strong id="statsValue">-</strong> <span id="statsUnit"></span></p>
+          <p class="stats-sub" id="statsSub">불러오는 중...</p>
+        </section>
+
+        <div class="stats-chart">
+          <canvas id="statsChart"></canvas>
+        </div>
+
+        <div id="statsTables"></div>
+      </div>
+    </main>
+
+    <div class="site-footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4">
+            <div class="widget">
+              <h2>DUNYAM.xyz</h2>
+              <address>Design_(프레이)물약</address>
+              <ul class="list-unstyled links">
+                <li><a href="mailto:highcw@naver.com">highcw@naver.com</a></li>
+                <li>© 2024 dunyam.xyz All rights reserved.</li>
+                <li>This site is not associated with NEXON Korea. Data sourced from NEOPLE OpenAPI.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="overlayer"></div>
+    <div class="loader">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <script src="/assets/js/chartjs.min.js"></script>
+    <script src="/js/aos.js"></script>
+    <script src="/js/custom.js"></script>
+    <script src="/js/rank.js"></script>
+  </body>
+</html>

@@ -6,8 +6,8 @@
     casillas: '카시야스', hilder: '힐더', anton: '안톤', bakal: '바칼'
   };
   var COLUMNS = [
-    'job_name', 'job_grow_name', 'item_level_sum', 'fame', 'dundam', 'mist_gear_count',
-    'custom_epic_count', 'enchant', 'queen_creature', 'fashionista_aurora', 'title', 'dark_land_count'
+    'job_name', 'job_grow_name', 'item_level_sum', 'fame', 'dundam',
+    'enchant', 'queen_creature', 'fashionista_aurora', 'title', 'mikaela_hard_count'
   ];
 
   var adventureName = (new URLSearchParams(location.search).get('search') || '').trim();
@@ -47,8 +47,7 @@
 
     $('fame_sum').innerText = fmt(data.fameSum);
     $('fame_avg').innerText = fmt(data.fameAvg);
-    $('dark_land_sum').innerText = fmt(data.darkLandSum);
-    $('mistGear_sum').innerText = fmt(data.mistGearSum);
+    $('mikaela_hard_sum').innerText = fmt(data.mikaelaHardSum);
 
     var tbody = $('characterRows');
     tbody.replaceChildren();
@@ -84,7 +83,7 @@
   var addContainer = $('addButtonContainer');
 
   function formBody() {
-    return { server: form.elements.server.value, name: form.elements.name.value };
+    return { name: form.elements.name.value };
   }
 
   form.addEventListener('submit', async function (event) {
@@ -143,43 +142,6 @@
       await load();
     });
   });
-
-  // 차트 (임시 데이터, 추후 업데이트 예정)
-  var tickFont = { size: 14, weight: 300, family: 'Roboto', style: 'normal', lineHeight: 2 };
-  var grid = { drawBorder: false, display: true, drawOnChartArea: true, drawTicks: false, borderDash: [5, 5], color: 'rgba(255, 255, 255, .2)' };
-
-  function chart(id, type, labels, dataset, yOptions, xGrid) {
-    new Chart($(id).getContext('2d'), {
-      type: type,
-      data: { labels: labels, datasets: [dataset] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        interaction: { intersect: false, mode: 'index' },
-        scales: {
-          y: Object.assign({ grid: grid, ticks: { display: true, color: '#f8f9fa', padding: 10, font: tickFont } }, yOptions),
-          x: { grid: xGrid, ticks: { display: true, color: '#f8f9fa', padding: 10, font: tickFont } }
-        }
-      }
-    });
-  }
-
-  var barDataset = {
-    label: '총합 명성', tension: 0.4, borderWidth: 0, borderRadius: 4, borderSkipped: false,
-    backgroundColor: 'rgba(255, 255, 255, .8)', data: [50300, 50500, 51000, 51500, 52000, 52000], maxBarThickness: 6
-  };
-  var barLabels = ['임시1', '임시2', '임시3', '임시4', '임시5', '임시6'];
-  var barY = { beginAtZero: false, suggestedMin: 50000, suggestedMax: 53000 };
-
-  chart('chart-Variance-fame', 'line', ['12/21', '12/28', '1/4', '1/11', '1/18', '1/25'], {
-    label: '변동 명성', tension: 0, borderWidth: 4, pointRadius: 5,
-    pointBackgroundColor: 'rgba(255, 255, 255, .8)', pointBorderColor: 'transparent',
-    borderColor: 'rgba(255, 255, 255, .8)', backgroundColor: 'transparent', fill: true,
-    data: [50500, 51000, 51500, 52000, 52000, 52000], maxBarThickness: 6
-  }, {}, { drawBorder: false, display: false, drawOnChartArea: false, drawTicks: false, borderDash: [5, 5] });
-  chart('chart-adv-total', 'bar', barLabels, barDataset, barY, grid);
-  chart('chart-adv-mean', 'bar', barLabels, Object.assign({}, barDataset), barY, grid);
 
   if (!adventureName) {
     location.replace('/');

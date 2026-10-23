@@ -1,0 +1,70 @@
+/* 메인 화면: 배경 사진 영역 절반 높이 */
+.hero.hero-half,
+.hero.hero-half > .container > .row,
+.hero.hero-half .hero-slide .img {
+  height: 50vh;
+  min-height: 300px; }
+.hero.hero-half { overflow: hidden; }
+.hero.hero-half .heading_index {
+  font-size: clamp(2.5rem, 11vw, 5rem); }
+
+/* 업적 카드 (명예의 전당) */
+.highlights {
+  background: #f5f6f8;
+  padding: 48px 0 56px; }
+  .highlights .highlights-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px; }
+  .highlights .highlights-title {
+    margin: 0 0 4px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #111; }
+  .highlights .highlights-desc {
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: #777; }
+  .highlights .highlights-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px; }
+  .highlights .highlight-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 22px 24px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e6e8eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    color: inherit;
+    text-decoration: none;
+    transition: transform .15s ease, box-shadow .15s ease; }
+    .highlights .highlight-card[href]:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+  .highlights .highlight-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8a8f98; }
+  .highlights .highlight-value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #111;
+    word-break: keep-all; }
+  .highlights .highlight-sub {
+    font-size: 14px;
+    color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; }
+  .highlights .highlight-card.empty .highlight-value {
+    color: #bbb; }
+
+@media (max-width: 991px) {
+  .highlights .highlights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575px) {
+  .highlights .highlights-grid { grid-template-columns: minmax(0, 1fr); }
+  .highlights .highlight-value { font-size: 24px; } }

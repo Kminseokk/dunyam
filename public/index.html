@@ -11,35 +11,14 @@
     <link rel="stylesheet" href="/css/tiny-slider.css" />
     <link rel="stylesheet" href="/css/aos.css" />
     <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/home.css" />
   </head>
   <body>
-    <div class="site-mobile-menu site-navbar-target">
-      <div class="site-mobile-menu-header">
-        <div class="site-mobile-menu-close">
-          <span class="icofont-close js-menu-toggle"></span>
-        </div>
-      </div>
-      <div class="site-mobile-menu-body"></div>
-    </div>
+    <header id="site-header" class="dy-header"></header>
+    <script src="/js/header.js"></script>
 
-    <nav class="site-nav">
-      <div class="menu-bg-wrap">
-        <div class="site-navigation">
-          <a href="/" class="logo m-0 float-start">DUNYAM.XYZ</a>
-          <ul class="js-clone-nav d-none d-lg-inline-block text-start site-menu float-end">
-            <li class="active"><a href="/">메인 화면</a></li>
-            <li><a href="/rank">랭킹</a></li>
-            <li><a href="/data">분포 그래프(beta)</a></li>
-            <li><a href="/about">안내 사항</a></li>
-          </ul>
-          <a href="#" class="burger light me-auto float-end mt-1 site-menu-toggle js-menu-toggle d-inline-block d-lg-none">
-            <span></span>
-          </a>
-        </div>
-      </div>
-    </nav>
-
-    <div class="hero">
+    <div class="hero hero-half">
       <div class="hero-slide">
         <div class="img overlay" style="background-image: url('/image_set/20240111_update.jpg')"></div>
         <div class="img overlay" style="background-image: url('/image_set/20240111_update_2.jpg')"></div>
@@ -65,13 +44,52 @@
       </div>
     </div>
 
+    <section class="highlights">
+      <div class="highlights-inner">
+        <h2 class="highlights-title">명예의 전당</h2>
+        <p class="highlights-desc">DUNYAM에 등록된 모든 모험단 기준 1위 기록입니다.</p>
+        <div class="highlights-grid">
+          <a class="highlight-card" data-key="topFame">
+            <span class="highlight-label">최고 명성 캐릭터</span>
+            <strong class="highlight-value">-</strong>
+            <span class="highlight-sub">집계 중</span>
+          </a>
+          <a class="highlight-card" data-key="topFameSum">
+            <span class="highlight-label">명성 총합 1위 모험단</span>
+            <strong class="highlight-value">-</strong>
+            <span class="highlight-sub">집계 중</span>
+          </a>
+          <a class="highlight-card" data-key="topFameAvg">
+            <span class="highlight-label">명성 평균 1위 모험단</span>
+            <strong class="highlight-value">-</strong>
+            <span class="highlight-sub">집계 중</span>
+          </a>
+          <a class="highlight-card" data-key="topMikaela">
+            <span class="highlight-label">미카엘라 하드 최다 클리어 모험단</span>
+            <strong class="highlight-value">-</strong>
+            <span class="highlight-sub">집계 중</span>
+          </a>
+          <a class="highlight-card" data-key="topBuffer">
+            <span class="highlight-label">최고 버퍼</span>
+            <strong class="highlight-value">-</strong>
+            <span class="highlight-sub">집계 중</span>
+          </a>
+          <a class="highlight-card" data-key="topCount">
+            <span class="highlight-label">최다 등록 모험단</span>
+            <strong class="highlight-value">-</strong>
+            <span class="highlight-sub">집계 중</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
     <div class="site-footer">
       <div class="container">
         <div class="row">
           <div class="col-lg-4">
             <div class="widget">
               <h2>DUNYAM.xyz</h2>
-              <address>Design_By_Potion</address>
+              <address>Design_(프레이)물약</address>
               <ul class="list-unstyled links">
                 <li><a href="mailto:highcw@naver.com">highcw@naver.com</a></li>
                 <li>© 2024 dunyam.xyz All rights reserved.</li>
@@ -92,7 +110,7 @@
 
     <script src="/js/tiny-slider.js"></script>
     <script src="/js/aos.js"></script>
-    <script src="/js/navbar.js"></script>
     <script src="/js/custom.js"></script>
+    <script src="/js/home.js"></script>
   </body>
 </html>
