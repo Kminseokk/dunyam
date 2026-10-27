@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>기댓값 계산기 - 던전앤파이터 모험단 검색 사이트</title>
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/statistics.css" />
+    <link rel="stylesheet" href="/css/calculator.css" />
+  </head>
+  <body>
+    <header id="site-header" class="dy-header"></header>
+    <script src="/js/header.js"></script>
+
+    <main class="stats">
+      <div class="stats-panel calc-panel">
+        <nav class="stats-tabs" id="calcTabs" aria-label="계산기 종류"></nav>
+
+        <section class="stats-summary">
+          <div class="calc-title-row">
+            <h1 class="stats-title" id="calcTitle">기댓값 계산기</h1>
+            <span class="calc-info" tabindex="0" role="button" aria-label="계산기 설명" aria-describedby="calcInfoTip">
+              !
+              <span class="calc-info-tip" id="calcInfoTip" role="tooltip"></span>
+            </span>
+          </div>
+          <p class="stats-sub" id="calcSource">불러오는 중...</p>
+        </section>
+
+        <div class="calc-columns">
+          <!-- 설정 -->
+          <div class="calc-col">
+            <section class="calc-box">
+              <h2 class="stats-table-title">장비 설정</h2>
+              <label class="calc-field calc-part">
+                <span>장비 부위</span>
+                <select id="part"></select>
+              </label>
+              <div class="calc-grid-2">
+                <label class="calc-field">
+                  <span>현재 수치</span>
+                  <input type="number" id="currentLevel" min="0" max="19" placeholder="0" />
+                </label>
+                <label class="calc-field">
+                  <span>목표 수치</span>
+                  <input type="number" id="targetLevel" min="1" max="18" placeholder="12" />
+                </label>
+              </div>
+              <p class="calc-hint">현재 수치가 빈칸이면 0으로 계산합니다.</p>
+            </section>
+
+            <section class="calc-box" id="detailBox">
+              <h2 class="stats-table-title">세부 설정</h2>
+              <p class="calc-label calc-label-first">장비 파괴 시</p>
+              <div class="calc-radios">
+                <label><input type="radio" name="destroyMode" value="spare" /> 새 장비로 다시 시작 (0부터)</label>
+                <label><input type="radio" name="destroyMode" value="protect" checked /> 약속과 믿음 사용 (같은 수치에서 재시도)</label>
+              </div>
+              <label class="calc-field">
+                <span>보호권 가격</span>
+                <input type="number" id="destroyCost" min="0" placeholder="0" />
+                <em>골드</em>
+              </label>
+              <p class="calc-hint">빈칸이면 0골드로 계산합니다.</p>
+            </section>
+
+            <section class="calc-box" id="eventBox">
+              <div class="calc-box-head">
+                <h2 class="stats-table-title">확률 상승 및 이벤트</h2>
+                <button type="button" class="calc-link" id="eventReset">초기화</button>
+              </div>
+              <div class="calc-options" id="eventOptions"></div>
+              <p class="calc-event-total" id="eventTotal"></p>
+              <p class="calc-hint">체크한 효과는 모든 강화 시도에 적용되며, 성공 확률은 100%를 넘지 않습니다.</p>
+            </section>
+
+            <details class="calc-box calc-collapse" id="stepDetails">
+              <summary>
+                <h2 class="stats-table-title">단계별 확률·비용</h2>
+                <span class="calc-collapse-toggle"></span>
+              </summary>
+              <p class="calc-hint">
+                선택한 부위의 1회 시도 비용입니다. 이벤트가 적용된 값은 <span class="calc-evented-sample">파란색</span>으로 표시되며, 마우스를 올리면 기본값이 보입니다.
+                실패로 수치가 내려가면 현재 수치보다 낮은 단계도 다시 사용합니다.
+              </p>
+              <div class="stats-table-wrap">
+                <table class="calc-table">
+                  <thead>
+                    <tr>
+                      <th>시도</th>
+                      <th>성공 확률(%)</th>
+                      <th>골드</th>
+                      <th id="materialHead">재료</th>
+                      <th>실패 시</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stepRows"></tbody>
+                </table>
+              </div>
+            </details>
+
+            <div class="calc-actions">
+              <button type="button" class="calc-btn primary" id="runBtn">계산하기</button>
+              <button type="button" class="calc-btn" id="cancelBtn" disabled>계산 취소</button>
+            </div>
+            <p class="calc-message" id="calcMessage"></p>
+          </div>
+
+          <!-- 결과 -->
+          <div class="calc-col">
+            <section class="calc-box">
+              <h2 class="stats-table-title">시뮬레이션 결과</h2>
+              <p class="calc-hint">평균은 확률식으로 정확히 계산합니다. <br>그래프와 상위 N%는 10만 회 시뮬레이션 결과이며, 그래프에서 상위 0.1%는 생략됩니다.</p>
+
+              <div class="calc-summary" id="summary"></div>
+              <p class="calc-dist-note" id="distNote"></p>
+
+              <p class="calc-label">소모 골드</p>
+              <p class="stats-value calc-avg">평균 <strong id="goldAvg">0</strong></p>
+              <div class="stats-chart calc-chart"><canvas id="goldChart"></canvas></div>
+              <div class="calc-percentile" data-metric="gold">
+                <label class="calc-field compact"><span>상위</span><input type="number" min="0.01" max="100" step="0.01" class="pct" /><em>%</em></label>
+                <span class="calc-swap">⇄</span>
+                <label class="calc-field compact"><input type="number" min="0" class="val" /><em>골드</em></label>
+              </div>
+
+              <p class="calc-label" id="materialTitle">소모 재료</p>
+              <p class="stats-value calc-avg">평균 <strong id="materialAvg">0</strong></p>
+              <div class="stats-chart calc-chart"><canvas id="materialChart"></canvas></div>
+              <div class="calc-percentile" data-metric="material">
+                <label class="calc-field compact"><span>상위</span><input type="number" min="0.01" max="100" step="0.01" class="pct" /><em>%</em></label>
+                <span class="calc-swap">⇄</span>
+                <label class="calc-field compact"><input type="number" min="0" class="val" /><em id="materialUnit">개</em></label>
+              </div>
+              <p class="calc-hint">상위 N%: 시뮬레이션 중 운이 좋은 순서로 N% 안에 드는 경우의 비용입니다. (예: 상위 50% = 절반은 이 비용 안에 성공)</p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div class="site-footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4">
+            <div class="widget">
+              <h2>DUNYAM.xyz</h2>
+              <address>Design_(프레이)물약</address>
+              <ul class="list-unstyled links">
+                <li><a href="mailto:highcw@naver.com">highcw@naver.com</a></li>
+                <li>© 2024 dunyam.xyz All rights reserved.</li>
+                <li>This site is not associated with NEXON Korea. Data sourced from NEOPLE OpenAPI.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/assets/js/chartjs.min.js"></script>
+    <script src="/js/calculator.js"></script>
+  </body>
+</html>

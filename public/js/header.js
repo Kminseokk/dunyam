@@ -6,9 +6,8 @@ var MENU = [
   { label: '홈', href: '/', match: ['/index', '/properties'] },
   { label: '랭킹', href: '/rank' },
   { label: '통계', href: '/statistics' },
-  { label: '기댓값 계산기', href: '/calculator', badge: 'N' },
-  { label: '강화', href: '/enhance' },
-  { label: '증폭', href: '/amplify' },
+  { label: '강화 기댓값 계산기', href: '/calculator/enhance', match: ['/calculator/safe'], badge: 'N' },
+  { label: '증폭 기댓값 계산기', href: '/calculator/amplify', match: ['/calculator/safe-amplify'] },
   { label: '길드', href: '/guild', badge: 'test' },
   //{ label: '안내 사항', href: '/about' }
 ];

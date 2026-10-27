@@ -1,3 +1,4 @@
+import { COST_TABLES } from './cost';
 import { getDundamValue } from './dundam';
 import { CharacterBase, CharacterDetail, NeopleError, getCharacter, getCharacterDetail, searchCharacters } from './neople';
 import { MIN_FAME } from './rules';
@@ -11,7 +12,8 @@ interface Env {
 }
 
 const FALLBACK_IMAGE = '/image_class/20240111_update_2.webp';
-const COMING_SOON = ['/calculator', '/enhance', '/amplify', '/guild'];
+const COMING_SOON = ['/guild'];
+const CALCULATOR_TYPES = ['enhance', 'safe', 'amplify', 'safe-amplify'] as const;
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 const fail = (message: string, status = 400) => json({ ok: false, message }, status);
@@ -76,6 +78,7 @@ async function edgeCached(request: Request, ctx: ExecutionContext, ttl: number, 
 
 const RANKING_TTL = 300;
 const STATISTICS_TTL = 3600;
+const COST_TTL = 600; // cost.ts 는 배포 때만 바뀜
 
 // 캐릭터가 바뀌면 이 데이터센터의 명예의 전당·랭킹 캐시를 비움 (다른 데이터센터는 ttl 후 갱신)
 function purgeRankingCache(request: Request, ctx: ExecutionContext) {
@@ -188,6 +191,15 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
     return edgeCached(request, ctx, STATISTICS_TTL, () => getStatistics(env.DB, type));
   }
 
+  // 기댓값 계산기 단계별 확률·비용 (src/cost.ts)
+  if (request.method === 'GET' && path === '/api/cost') {
+    const type = new URL(request.url).searchParams.get('type') as (typeof CALCULATOR_TYPES)[number];
+    if (!CALCULATOR_TYPES.includes(type)) throw new BadRequest('type 값이 올바르지 않습니다.');
+    const table = COST_TABLES[type];
+    if (!table) return fail('아직 준비 중인 데이터입니다.', 404);
+    return edgeCached(request, ctx, COST_TTL, async () => json({ ok: true, type, ...table() }));
+  }
+
   if (request.method === 'GET' && path === '/api/adventure') {
     const adventure = text({ name: new URL(request.url).searchParams.get('name') }, 'name');
     return getAdventure(env, request, adventure);
@@ -282,11 +294,15 @@ export default {
     }
 
     // 탭 페이지: /<페이지>/<탭> 은 모두 같은 HTML, /<페이지> 는 첫 탭으로
-    const tabPages: Record<string, readonly string[]> = { rank: RANK_TYPES, statistics: STAT_TYPES };
+    const tabPages: Record<string, readonly string[]> = {
+      rank: RANK_TYPES,
+      statistics: STAT_TYPES,
+      calculator: CALCULATOR_TYPES,
+    };
     if (url.pathname === '/data') {
       return Response.redirect(new URL(`/statistics/${STAT_TYPES[0]}`, url).toString(), 301);
     }
-    const [, page, tab] = url.pathname.match(/^\/(rank|statistics)(?:\/([a-z-]*))?\/?$/) ?? [];
+    const [, page, tab] = url.pathname.match(/^\/(rank|statistics|calculator)(?:\/([a-z-]*))?\/?$/) ?? [];
     if (page && !tab) {
       return Response.redirect(new URL(`/${page}/${tabPages[page][0]}`, url).toString(), 301);
     }

@@ -1,0 +1,205 @@
+/* 기댓값 계산기: 통계 페이지(statistics.css)의 어두운 패널·탭·표 스타일 위에 계산기 전용 요소만 추가 */
+.stats .calc-panel { max-width: 1300px; }
+
+.stats .calc-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start; }
+.stats .calc-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.stats .calc-box {
+  padding: 4px 20px 20px;
+  border: 1px solid #2d313a;
+  border-radius: 10px; }
+  .stats .calc-box .stats-table-title { margin: 16px 0 12px; }
+
+/* 제목 옆 느낌표 아이콘 + 설명 말풍선 (마우스 오버, 키보드 포커스, 모바일 탭) */
+.stats .calc-title-row { display: flex; align-items: center; gap: 8px; }
+  .stats .calc-title-row .stats-title { margin-bottom: 0; }
+.stats .calc-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e53935;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+  outline: none; }
+  .stats .calc-info:focus-visible { box-shadow: 0 0 0 2px #fff; }
+.stats .calc-info-tip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: -12px;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  width: min(420px, calc(100vw - 48px));
+  padding: 12px 14px;
+  border: 1px solid #3a3f4a;
+  border-radius: 8px;
+  background: #2a2e37;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: #ddd;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  cursor: default; }
+  .stats .calc-info-tip::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 16px;
+    width: 10px;
+    height: 10px;
+    border-left: 1px solid #3a3f4a;
+    border-top: 1px solid #3a3f4a;
+    background: #2a2e37;
+    transform: rotate(45deg); }
+  .stats .calc-info:hover .calc-info-tip,
+  .stats .calc-info:focus .calc-info-tip { display: flex; }
+
+.stats .calc-box-head { display: flex; justify-content: space-between; align-items: baseline; }
+.stats .calc-link { border: 0; background: none; color: #4a90ff; font-size: 13px; cursor: pointer; }
+
+/* 접고 펴는 상자 (단계별 확률·비용) */
+.stats .calc-collapse summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  list-style: none;
+  cursor: pointer; }
+  .stats .calc-collapse summary::-webkit-details-marker { display: none; }
+  .stats .calc-collapse summary .stats-table-title { margin: 16px 0; }
+  .stats .calc-collapse-toggle { font-size: 13px; color: #4a90ff; }
+    .stats .calc-collapse-toggle::after { content: '펼치기 ▾'; }
+    .stats .calc-collapse[open] .calc-collapse-toggle::after { content: '접기 ▴'; }
+.stats .calc-collapse:not([open]) { padding-bottom: 4px; }
+
+/* 확률 상승 및 이벤트 체크박스 */
+.stats .calc-options { display: flex; flex-direction: column; gap: 8px; }
+  .stats .calc-options label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #3a3f4a;
+    border-radius: 6px;
+    background: #2a2e37;
+    font-size: 14px;
+    color: #ddd;
+    cursor: pointer; }
+    .stats .calc-options label:has(input:checked) { border-color: #4a90ff; color: #fff; }
+  .stats .calc-options input { accent-color: #4a90ff; width: 16px; height: 16px; }
+  .stats .calc-options em { margin-left: auto; font-style: normal; font-size: 13px; color: #4a90ff; }
+.stats .calc-event-total { margin: 10px 2px 0; font-size: 14px; font-weight: 600; color: #4a90ff; }
+  .stats .calc-event-total:empty { display: none; }
+
+/* 이벤트가 적용된 칸 */
+.stats table.calc-table td.evented, .stats .calc-evented-sample { color: #4a90ff; font-weight: 600; }
+
+.stats .calc-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+/* 입력칸 */
+.stats .calc-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #3a3f4a;
+  border-radius: 6px;
+  background: #2a2e37; }
+  .stats .calc-field span { font-size: 12px; color: #8a8f98; }
+  .stats .calc-field input {
+    width: 100%;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    font-size: 15px;
+    color: #fff;
+    outline: none; }
+  .stats .calc-field em {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    font-style: normal;
+    font-size: 13px;
+    color: #8a8f98; }
+  .stats .calc-field:focus-within { border-color: #4a90ff; }
+  .stats .calc-field.compact { flex-direction: row; align-items: center; gap: 8px; padding: 10px 12px; }
+    .stats .calc-field.compact span, .stats .calc-field.compact em { position: static; flex-shrink: 0; white-space: nowrap; }
+    .stats .calc-field.compact input { min-width: 0; }
+.stats .calc-box > .calc-field + .calc-field { margin-top: 12px; }
+.stats .calc-part { margin-bottom: 12px; }
+  .stats .calc-field select {
+    width: 100%;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    font-size: 15px;
+    color: #fff;
+    outline: none; }
+    .stats .calc-field select option { background: #2a2e37; }
+
+.stats .calc-hint { margin: 6px 2px 0; font-size: 12px; color: #8a8f98; }
+.stats .calc-label { margin: 20px 0 8px; font-size: 15px; font-weight: 700; color: #fff; }
+  .stats .calc-label.calc-label-first { margin-top: 0; }
+
+.stats .calc-radios { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 14px; color: #ddd; }
+  .stats .calc-radios input { accent-color: #4a90ff; margin-right: 6px; }
+
+/* 단계별 표: 통계 표 머리글 + 어두운 입력칸 */
+.stats table.calc-table th, .stats table.calc-table td { text-align: center; }
+.stats table.calc-table td { padding: 5px 4px; }
+.stats table.calc-table td:first-child { font-weight: 600; color: #fff; }
+.stats table.calc-table tr.below td { opacity: 0.5; }
+.stats table.calc-table td.destroy { color: #ff6b6b; }
+.stats table.calc-table td.down { color: #f0b429; }
+.stats table.calc-table td.calc-hint { padding: 16px; white-space: normal; }
+
+/* 버튼 */
+.stats .calc-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.stats .calc-btn {
+  padding: 12px;
+  border: 1px solid #3a3f4a;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  color: #c8c8c8;
+  cursor: pointer; }
+  .stats .calc-btn.primary { border-color: #4a90ff; background: #4a90ff; color: #fff; }
+  .stats .calc-btn:disabled { opacity: 0.4; cursor: default; }
+.stats .calc-message { margin: 0 2px; min-height: 20px; font-size: 14px; color: #ff6b6b; }
+  .stats .calc-message.progress { color: #4a90ff; }
+
+/* 결과 */
+.stats .calc-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .stats .calc-summary div { padding: 10px 12px; border-radius: 6px; background: #2a2e37; }
+  .stats .calc-summary span { display: block; font-size: 12px; color: #8a8f98; }
+  .stats .calc-summary strong { font-size: 16px; color: #fff; }
+.stats .calc-dist-note { margin: 8px 2px 0; font-size: 13px; color: #f0b429; }
+  .stats .calc-dist-note:empty { display: none; }
+.stats .no-dist .calc-chart, .stats .no-dist .calc-percentile { display: none; }
+.stats .calc-avg { margin: 0 0 8px; }
+  .stats .calc-avg strong { font-size: 26px; }
+.stats .stats-chart.calc-chart { height: 240px; margin-bottom: 12px; }
+.stats .calc-percentile { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.stats .calc-swap { font-size: 20px; color: #8a8f98; }
+
+@media (max-width: 1100px) {
+  .stats .calc-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 575px) {
+  .stats .calc-box { padding: 4px 12px 16px; }
+  .stats .calc-avg strong { font-size: 22px; } }

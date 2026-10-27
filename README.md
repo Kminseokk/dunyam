@@ -16,6 +16,7 @@ Cloudflare Workers(무료 티어) 기반.
 | GET | `/api/highlights` | 메인 화면 명예의 전당 (엣지 캐시 5분) |
 | GET | `/api/ranking?type=` | 모험단 랭킹 상위 10위. `fame-sum` / `fame-avg` / `count` / `mikaela` (엣지 캐시 5분) |
 | GET | `/api/statistics?type=` | 통계. `server` / `job` / `fame` / `dundam` (엣지 캐시 1시간) |
+| GET | `/api/cost?type=` | 기댓값 계산기 단계별 확률·비용 (`src/cost.ts`). `enhance` / `safe` / `amplify` / `safe-amplify` (엣지 캐시 10분) |
 | POST | `/api/check` | `{adventure, name}` 모험단 소속·등록 가능 여부 확인 |
 | POST | `/api/save` | `{adventure, name}` 캐릭터 추가 |
 | POST | `/api/refresh` | `{adventure, uid}` 캐릭터 1명 갱신 |
