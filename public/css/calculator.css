@@ -102,6 +102,7 @@
     .stats .calc-options label:has(input:checked) { border-color: #4a90ff; color: #fff; }
   .stats .calc-options input { accent-color: #4a90ff; width: 16px; height: 16px; }
   .stats .calc-options em { margin-left: auto; font-style: normal; font-size: 13px; color: #4a90ff; }
+.stats .calc-safe-option { margin-top: 16px; }
 .stats .calc-event-total { margin: 10px 2px 0; font-size: 14px; font-weight: 600; color: #4a90ff; }
   .stats .calc-event-total:empty { display: none; }
 

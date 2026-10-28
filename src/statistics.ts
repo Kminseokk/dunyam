@@ -1,9 +1,8 @@
 // 통계 페이지 데이터. 저장된 전체 캐릭터 기준.
-export const STAT_TYPES = ['server', 'job', 'fame', 'dundam'] as const;
+export const STAT_TYPES = ['server', 'job', 'fame'] as const;
 export type StatType = (typeof STAT_TYPES)[number];
 
 const FAME_BUCKET = 5000;
-const dundamNumber = (unit: string) => `CAST(REPLACE(dundam, '${unit}', '') AS INTEGER)`;
 
 const QUERIES: Record<StatType, Record<string, string>> = {
   server: {
@@ -21,16 +20,6 @@ const QUERIES: Record<StatType, Record<string, string>> = {
       FROM characters WHERE fame IS NOT NULL GROUP BY bucket ORDER BY bucket`,
     summary: `SELECT COUNT(*) AS characters, ROUND(AVG(fame)) AS avg_fame, MAX(fame) AS max_fame, MIN(fame) AS min_fame
       FROM characters WHERE fame IS NOT NULL`,
-  },
-  dundam: {
-    rows: `SELECT job_grow_name, COUNT(*) AS count, ROUND(AVG(${dundamNumber('억')})) AS avg_value,
-        MAX(${dundamNumber('억')}) AS max_value
-      FROM characters WHERE dundam LIKE '%억' GROUP BY job_grow_name ORDER BY avg_value DESC`,
-    buffers: `SELECT job_grow_name, COUNT(*) AS count, ROUND(AVG(${dundamNumber('만')})) AS avg_value,
-        MAX(${dundamNumber('만')}) AS max_value
-      FROM characters WHERE dundam LIKE '%만' GROUP BY job_grow_name ORDER BY avg_value DESC`,
-    summary: `SELECT COUNT(*) AS characters, SUM(dundam LIKE '%억') AS dealers, SUM(dundam LIKE '%만') AS buffers
-      FROM characters WHERE dundam LIKE '%억' OR dundam LIKE '%만'`,
   },
 };
 

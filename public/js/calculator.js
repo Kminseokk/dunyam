@@ -11,9 +11,10 @@
       info: [
         '확률·비용은 나무위키 강화 표 기준이며, 골드는 100레벨 장비 기준입니다.',
         '실패 시 무기는 +11·+12 시도에서 3단계 하락, +13 시도부터 파괴됩니다. 그 외 장비는 +11 시도부터 파괴됩니다.',
-        '파괴 시 약속과 믿음을 쓰면 같은 수치에서 다시 시도합니다.',
+        '파괴되면 새 장비로 0부터 다시 시작하며, 파괴될 때마다 보호권 가격을 더합니다.',
         '일반 강화는 실패해도 성공 확률 보정치가 없습니다.',
-        '칭호·코스튬·이벤트 등 확률 보정은 \'확률 상승 및 이벤트\'에서 체크한 항목만 반영됩니다.'
+        '칭호·코스튬·이벤트 등 확률 보정은 \'확률 상승 및 이벤트\'에서 체크한 항목만 반영됩니다.',
+        '강화는 +18 까지의 정보만이 있어서 +18까지가 최대 수치입니다.'
       ]
     },
     safe: {
@@ -29,8 +30,10 @@
       info: [
         '확률·모순의 결정체 소모량은 나무위키 증폭 표(2021-12-02 확률 공개 기준)이며, 골드는 100레벨 에픽 기준으로 1회마다 고정입니다.',
         '실패 시 +5~+7 시도는 1단계, +8~+10 시도는 3단계 하락하고, +11 시도부터 파괴됩니다.',
-        '약속과 믿음을 쓰면 같은 수치에서 다시 시도합니다.',
-        '증폭은 실패해도 성공 확률 보정치가 없습니다.'
+        '파괴되면 새 장비로 0부터 다시 시작하며, 파괴될 때마다 보호권 가격을 더합니다.',
+        '증폭은 실패해도 성공 확률 보정치가 없습니다.',
+        '\'+10까지 안전 증폭 및 증폭대란 이용\'을 체크하면 +10까지는 안전 증폭(증폭 대란 적용) 평균 비용으로 고정합니다.',
+        '증폭는 +13 까지의 정보만이 있어서 +13까지가 최대 수치입니다. 추후 업데이트 예정입니다.'
       ]
     },
     'safe-amplify': {
@@ -39,7 +42,8 @@
         '장착 레벨 100 이상, 유니크 이상, +9 이하 장비에 가능하며 최대 +10까지입니다.',
         '골드와 조화의 결정체를 소모하며, 무기와 무기 외 장비의 소모량이 다릅니다.',
         '실패해도 증폭 수치가 내려가거나 파괴되지 않습니다.',
-        '실패할 때마다 그 단계의 성공 확률이 올라가며(+5~+7: 10%p, +8~+10: 5%p), 성공하면 초기화된다고 가정합니다.'
+        '실패할 때마다 그 단계의 성공 확률이 올라가며(+5~+7: 10%p, +8~+10: 5%p), 성공하면 초기화된다고 가정합니다.',
+        '\'증폭 대란\'은 2023 신년 이벤트 공지 기준(+7까지 100%, +8~+10 +10%p)이며, 실패 보정치는 그 위에 더해집니다.'
       ]
     }
   };
@@ -50,7 +54,9 @@
 
   // 확률 상승 및 이벤트: 체크하면 자동 보정 (계산기별)
   //   rate: 성공 확률 더하기(%p, 0.01 = 1%p) / gold·material: 비용 할인율(0.5 = 50%)
-  //   setRate: 목표 수치별 성공 확률 지정 ({ '1-9': 1 } = +1~+9 시도 100%). 지정 후 rate(%p)를 더한다.
+  //   setRate: 목표 수치별 성공 확률 지정 ({ '1-9': 1 } = +1~+9 시도 100%)
+  //   addRate: 목표 수치별 성공 확률 더하기 ({ '8-10': 0.1 } = +8~+10 시도 +10%p)
+  //   적용 순서: setRate(지정) → addRate·rate(더하기). 안전 강화·증폭의 실패 보정치는 계산할 때 그 위에 더한다.
   //   effect: (선택) 화면에 보여 줄 효과 설명. 없으면 rate·할인율로 자동 생성
   var EVENT_OPTIONS = {
     enhance: [
@@ -58,6 +64,10 @@
       { id: 'kiri', label: '키리 칭호', rate: 0.01 },
       { id: 'costume', label: '코스튬', rate: 0.01 },
       { id: 'daeran', label: '(구) 강화대란', setRate: { '1-9': 1, 10: 0.5 }, effect: '+1~+9 100%, +9→+10 50%' }
+    ],
+    // 2023 신년 안전 증폭 이벤트 공지 기준: 100% 구간 +4 → +7 확장, +10까지 확률 10% 상승
+    'safe-amplify': [
+      { id: 'amp-daeran', label: '증폭 대란', setRate: { '1-7': 1 }, addRate: { '8-10': 0.1 }, effect: '+1~+7 100%, +8~+10 +10%p' }
     ]
   };
   var MAX_ATTEMPTS_PER_TRIAL = 1000000; // 확률이 너무 낮을 때 무한 반복 방지
@@ -70,6 +80,8 @@
 
   function $(id) { return document.getElementById(id); }
   function num(v) { var n = Number(String(v).replace(/,/g, '')); return isFinite(n) ? n : 0; }
+  // 입력값을 숫자만 남겨 천 단위 쉼표로 표시 (예: '1234567' → '1,234,567')
+  function withCommas(v) { return String(v || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
   // 골드는 조/억/만 단위로 표시 (가장 큰 두 단위까지)
   function fmtGold(n) {
@@ -124,9 +136,10 @@
   function load() {
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem(cfg.storageKey)); } catch (e) { /* 저장소 사용 불가 */ }
-    var s = Object.assign({ part: '', current: '', target: '', destroyMode: 'protect', destroyCost: '' }, saved || {});
+    var s = Object.assign({ part: '', current: '', target: '', destroyCost: '', safeTo10: false }, saved || {});
     if (!Array.isArray(s.events)) s.events = [];
     delete s.event; // 이전 버전의 직접 입력 이벤트 값
+    delete s.destroyMode; // 이전 버전의 파괴 시 선택 (약속과 믿음 옵션 삭제)
     return s;
   }
   function save() {
@@ -135,8 +148,7 @@
 
   $('currentLevel').value = state.current;
   $('targetLevel').value = state.target;
-  $('destroyCost').value = state.destroyCost;
-  document.querySelector('input[name="destroyMode"][value="' + state.destroyMode + '"]').checked = true;
+  $('destroyCost').value = withCommas(state.destroyCost);
   renderEventOptions();
 
   // ─── 확률 상승 및 이벤트 (체크박스) ───
@@ -166,21 +178,24 @@
     if (o.material) parts.push('재료 ' + Math.round(o.material * 100) + '% 할인');
     return parts.join(', ');
   }
-  // 체크한 옵션 효과 합계 (setRate: 목표 수치 → 지정 확률, 여러 옵션이 겹치면 높은 값)
+  // { '1-9': v, 10: w } 형태를 목표 수치별로 펼쳐서 fn(목표 수치, 값) 호출
+  function eachTarget(byRange, fn) {
+    Object.keys(byRange || {}).forEach(function (key) {
+      var range = String(key).split('-').map(Number);
+      for (var t = range[0]; t <= (range[1] || range[0]); t++) fn(t, byRange[key]);
+    });
+  }
+  // 체크한 옵션 효과 합계 (setRate: 겹치면 높은 값 / addRate: 더함)
   function eventTotals() {
-    var total = { rate: 0, gold: 0, material: 0, setRate: {}, effects: [] };
+    var total = { rate: 0, gold: 0, material: 0, setRate: {}, addRate: {}, effects: [] };
     eventOptions.forEach(function (o) {
       if (state.events.indexOf(o.id) < 0) return;
       total.rate += o.rate || 0;
       total.gold += o.gold || 0;
       total.material += o.material || 0;
-      Object.keys(o.setRate || {}).forEach(function (key) {
-        var range = String(key).split('-').map(Number);
-        for (var t = range[0]; t <= (range[1] || range[0]); t++) {
-          total.setRate[t] = Math.max(total.setRate[t] || 0, o.setRate[key]);
-        }
-      });
-      if (o.setRate) total.effects.push(o.label);
+      eachTarget(o.setRate, function (t, v) { total.setRate[t] = Math.max(total.setRate[t] || 0, v); });
+      eachTarget(o.addRate, function (t, v) { total.addRate[t] = (total.addRate[t] || 0) + v; });
+      if (o.setRate || o.addRate) total.effects.push(o.label);
     });
     total.gold = Math.min(1, total.gold);
     total.material = Math.min(1, total.material);
@@ -219,7 +234,7 @@
     return partSteps().map(function (s) {
       var baseRate = ev.setRate[s.target] != null ? ev.setRate[s.target] : s.rate;
       var adjusted = {
-        rate: Math.min(1, baseRate + ev.rate),
+        rate: Math.min(1, baseRate + (ev.addRate[s.target] || 0) + ev.rate),
         gold: s.gold * (1 - ev.gold),
         material: s.material * (1 - ev.material)
       };
@@ -227,7 +242,32 @@
       ['rate', 'gold', 'material'].forEach(function (key) { changed[key] = Math.abs(adjusted[key] - s[key]) > 1e-12; });
       return Object.assign({}, s, adjusted, { base: s, changed: changed });
     });
-  }  function levels() {
+  }
+
+  // ─── 증폭: +10까지 안전 증폭 + 증폭 대란 이용 ───
+  // +10까지는 안전 증폭(대란 적용) 평균 비용으로 고정하고, 그 이후만 일반 증폭으로 계산한다.
+  var SAFE_TO = 10;
+  var safeTable = null; // 안전 증폭 표 (일반 증폭 계산기에서만 불러옴)
+  function useSafeTo10() { return mode === 'amplify' && state.safeTo10 && !!safeTable; }
+  // 선택한 부위의 안전 증폭 단계에 증폭 대란(EVENT_OPTIONS 의 정의)을 적용
+  function safeDaeranSteps() {
+    var daeran = (EVENT_OPTIONS['safe-amplify'] || []).filter(function (o) { return o.id === 'amp-daeran'; })[0] || {};
+    var set = {}, add = {};
+    eachTarget(daeran.setRate, function (t, v) { set[t] = v; });
+    eachTarget(daeran.addRate, function (t, v) { add[t] = v; });
+    var part = safeTable.parts.filter(function (p) { return p.id === $('part').value; })[0] || safeTable.parts[0];
+    return part.steps.map(function (s) {
+      var rate = set[s.target] != null ? set[s.target] : s.rate;
+      return Object.assign({}, s, { rate: Math.min(1, rate + (add[s.target] || 0)) });
+    });
+  }
+  // 안전 증폭 구간(from → to)의 평균 비용 (파괴 없음)
+  function safeFixedCost(from, to) {
+    if (to <= from) return { gold: 0, material: 0, attempts: 0 };
+    return exactExpectation(toArrays(safeDaeranSteps().slice(0, to)), { current: from, target: to }, 0);
+  }
+
+  function levels() {
     var current = Math.max(0, Math.floor(num($('currentLevel').value)));
     var target = Math.floor(num($('targetLevel').value));
     return { current: current, target: target };
@@ -263,9 +303,24 @@
       tbody.append(tr);
       return;
     }
+    var safeRows = useSafeTo10() ? safeDaeranSteps() : null;
     eventSteps().slice(0, lv.target).forEach(function (s) {
       var row = document.createElement('tr');
       if (s.target <= lv.current) row.className = 'below';
+      if (safeRows && s.target <= SAFE_TO) {
+        // +10까지는 안전 증폭(증폭 대란) 값으로 표시
+        var safe = safeRows[s.target - 1];
+        var note = '안전 증폭 + 증폭 대란 (평균 비용으로 고정)';
+        row.append(
+          cell('+' + (s.target - 1) + ' → +' + s.target),
+          cell(fmtRate(safe.rate), 'evented', note),
+          cell(fmtStepGold(safe.gold), 'evented', note),
+          cell(safeTable.material + ' ' + safe.material.toLocaleString() + cfg.unit, 'evented', note),
+          cell('유지' + (safe.failBonus ? ' · 확률 +' + Math.round(safe.failBonus * 10000) / 100 + '%p 누적' : ''), '', note)
+        );
+        tbody.append(row);
+        return;
+      }
       row.append(
         cell('+' + (s.target - 1) + ' → +' + s.target),
         eventCell(s, 'rate', fmtRate),
@@ -288,10 +343,19 @@
     });
   });
   $('part').addEventListener('change', function () { state.part = $('part').value; save(); renderRows(); });
-  $('destroyCost').addEventListener('input', function () { state.destroyCost = $('destroyCost').value; save(); });
-  document.querySelectorAll('input[name="destroyMode"]').forEach(function (r) {
-    r.addEventListener('change', function () { state.destroyMode = r.value; save(); });
+  $('destroyCost').addEventListener('input', function () {
+    // 숫자만 남기고 천 단위 쉼표를 넣되, 커서는 같은 숫자 뒤에 유지
+    var input = this;
+    var digitsBefore = input.value.slice(0, input.selectionStart).replace(/\D/g, '').length;
+    input.value = withCommas(input.value);
+    var pos = 0;
+    for (var seen = 0; pos < input.value.length && seen < digitsBefore; pos++) if (/\d/.test(input.value[pos])) seen++;
+    input.setSelectionRange(pos, pos);
+    state.destroyCost = input.value.replace(/,/g, '');
+    save();
   });
+  $('safeTo10').checked = !!state.safeTo10;
+  $('safeTo10').addEventListener('change', function () { state.safeTo10 = this.checked; save(); renderRows(); });
 
   // ─── 확률·비용 표 불러오기 ───
   $('runBtn').disabled = true;
@@ -319,6 +383,17 @@
       });
       $('runBtn').disabled = false;
       renderRows();
+      // 일반 증폭: '+10까지 안전 증폭 및 증폭대란 이용' 옵션용으로 안전 증폭 표도 불러온다
+      if (mode === 'amplify') {
+        return fetch('/api/cost?type=safe-amplify')
+          .then(function (res) { return res.json(); })
+          .then(function (safe) {
+            if (!safe.ok) return;
+            safeTable = safe;
+            $('safeTo10Box').hidden = false;
+            renderRows();
+          });
+      }
     })
     .catch(function (e) {
       $('calcSource').textContent = e.message || '확률·비용 표를 불러오지 못했습니다.';
@@ -334,9 +409,10 @@
   }
 
   // 시뮬레이션용 배열 (인덱스 = 목표 수치, drop 은 하락 단계 수 / -1 = 파괴 / 0 = 유지, bonus = 실패 시 누적 확률)
-  function buildSteps(lv) {
+  function buildSteps(lv) { return toArrays(eventSteps().slice(0, lv.target)); }
+  function toArrays(list) {
     var rate = [], gold = [], material = [], drop = [], bonus = [];
-    eventSteps().slice(0, lv.target).forEach(function (s) {
+    list.forEach(function (s) {
       var down = /^down(\d+)$/.exec(s.fail);
       rate[s.target] = s.rate;
       gold[s.target] = s.gold;
@@ -346,9 +422,6 @@
     });
     return { rate: rate, gold: gold, material: material, drop: drop, bonus: bonus };
   }
-
-  // 파괴 실패 후 수치: 보호권 사용 시 같은 수치에서 재시도, 새 장비면 0부터
-  function levelAfterDestroy(level, destroyMode) { return destroyMode === 'protect' ? level : 0; }
 
   // ─── 평균: 확률식으로 정확히 계산 ───
   // 단계 t 를 "통과"(t-1 → t)하는 데 드는 기댓값 D[t] 를 아래 단계부터 차례로 구해 더한다.
@@ -368,16 +441,16 @@
     return e;
   }
 
-  function exactExpectation(steps, lv, destroyCost, destroyMode) {
+  // 파괴되면 새 장비로 floor(기본 0)부터 다시 시작한다
+  function exactExpectation(steps, lv, destroyCost, floor) {
     var keys = ['gold', 'material', 'attempts', 'destroys'];
     var D = [];
     for (var t = 1; t <= lv.target; t++) {
       var drop = steps.drop[t];
       var destroy = drop === -1;
-      var spare = destroy && destroyMode !== 'protect';
       // 새 장비로 다시 시작하면 보정치도 사라진다
-      var tries = expectedTries(steps.rate[t], spare ? 0 : steps.bonus[t]);
-      var after = destroy ? levelAfterDestroy(t - 1, destroyMode) : drop === Infinity ? 0 : drop ? Math.max(0, t - 1 - drop) : t - 1;
+      var tries = expectedTries(steps.rate[t], destroy ? 0 : steps.bonus[t]);
+      var after = destroy ? floor || 0 : drop === Infinity ? 0 : drop ? Math.max(0, t - 1 - drop) : t - 1;
       var cost = { gold: steps.gold[t], material: steps.material[t], attempts: 1, destroys: 0 };
       var extra = destroy ? { gold: destroyCost, destroys: 1 } : {};
       D[t] = {};
@@ -409,12 +482,39 @@
     if (running) { running.cancelled = true; running = null; }
     var steps = buildSteps(lv);
     var destroyCost = num($('destroyCost').value);
-    var destroyMode = state.destroyMode;
-    var exact = exactExpectation(steps, lv, destroyCost, destroyMode);
+
+    // +10까지 안전 증폭(증폭 대란) 이용: +10까지는 평균 비용으로 고정, 그 이후만 일반 증폭
+    var safe = useSafeTo10();
+    var fixed = { gold: 0, material: 0, attempts: 0 }; // 현재 → +10 안전 증폭
+    var restart = { gold: 0, material: 0, attempts: 0 }; // 새 장비로 0 → +10 다시 안전 증폭
+    var floor = 0, destroyExtra = destroyCost, simLv = lv;
+    if (safe) {
+      fixed = safeFixedCost(lv.current, Math.min(SAFE_TO, lv.target));
+      restart = safeFixedCost(0, SAFE_TO);
+      floor = SAFE_TO;
+      destroyExtra = destroyCost + restart.gold;
+      simLv = { current: Math.max(lv.current, SAFE_TO), target: lv.target };
+    }
+    var normal = simLv.target > simLv.current
+      ? exactExpectation(steps, simLv, destroyExtra, floor)
+      : { gold: 0, material: 0, attempts: 0, destroys: 0 };
+    var exact = {
+      gold: fixed.gold + normal.gold,
+      material: normal.material,
+      attempts: fixed.attempts + normal.attempts + normal.destroys * restart.attempts,
+      destroys: normal.destroys
+    };
+    if (safe) exact.safeMaterial = fixed.material + normal.destroys * restart.material;
     showAverages(exact);
 
-    if (exact.attempts > SIM_MAX_MEAN_ATTEMPTS) {
-      clearDistribution('평균 강화 횟수가 ' + Math.round(exact.attempts).toLocaleString() + '회로 너무 많아 분포 그래프는 생략했습니다. 평균은 정확한 값입니다.');
+    var safeNote = safe ? '+10까지의 안전 증폭 비용은 평균값으로 고정해 더했습니다.' : '';
+    if (safe && lv.target <= SAFE_TO) {
+      clearDistribution('목표가 +10 이하라 안전 증폭 평균 비용만 계산했습니다. (분포 그래프 생략)');
+      message('');
+      return;
+    }
+    if (normal.attempts > SIM_MAX_MEAN_ATTEMPTS) {
+      clearDistribution('평균 강화 횟수가 ' + Math.round(normal.attempts).toLocaleString() + '회로 너무 많아 분포 그래프는 생략했습니다. 평균은 정확한 값입니다.');
       message('');
       return;
     }
@@ -428,7 +528,7 @@
 
     var fails = new Array(lv.target + 1); // 단계별 마지막 성공 이후 실패 횟수 (보정치)
     function trial() {
-      var level = lv.current, g = 0, m = 0, attempts = 0;
+      var level = simLv.current, g = fixed.gold, m = 0, attempts = 0;
       fails.fill(0);
       while (level < lv.target) {
         var t = level + 1;
@@ -439,9 +539,9 @@
         fails[t]++;
         var drop = steps.drop[t];
         if (drop === -1) { // 파괴
-          level = levelAfterDestroy(level, destroyMode);
-          g += destroyCost;
-          if (destroyMode !== 'protect') fails.fill(0); // 새 장비: 보정치 초기화
+          level = floor;
+          g += destroyExtra;
+          fails.fill(0); // 새 장비: 보정치 초기화
         } else if (drop) level = Math.max(0, level - drop);
       }
       return [g, m];
@@ -469,6 +569,7 @@
       }
       finish(job);
       showDistribution(job, trials);
+      $('distNote').textContent = safeNote;
     }
     setTimeout(chunk, 0);
   }
@@ -509,10 +610,11 @@
     var v = summaryValues;
     var items = [
       ['평균 시도 횟수', v.attempts],
-      [state.destroyMode === 'protect' ? '평균 보호권 사용' : '평균 파괴 횟수', v.destroys],
+      ['평균 파괴 횟수', v.destroys],
       ['중앙값 골드 (상위 50%)', v.median || '-'],
       ['분포 시뮬레이션', v.trials || '-']
     ];
+    if (v.safeMaterial) items.splice(2, 0, ['평균 ' + safeTable.material + ' (안전 증폭)', v.safeMaterial]);
     $('summary').replaceChildren.apply($('summary'), items.map(function (s) {
       var div = document.createElement('div');
       var label = document.createElement('span');
@@ -528,6 +630,7 @@
     $('goldAvg').textContent = fmtGold(exact.gold);
     $('materialAvg').textContent = fmtCount(exact.material);
     summaryValues = { attempts: fmtTimes(exact.attempts), destroys: fmtTimes(exact.destroys) };
+    if (exact.safeMaterial > 0) summaryValues.safeMaterial = fmtCount(exact.safeMaterial);
     renderSummary();
     clearDistribution('');
   }

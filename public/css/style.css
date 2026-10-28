@@ -10009,15 +10009,3 @@ textarea {
   border-radius: 10px 10px 10px 10px;
   margin-right: 10px; /* 간격 조절 */
 }
-
-.col-lg-12 .card-header h6 .dundam-update-btn{
-  float: right;
-  height: 40px;
-  width: 150px;
-  background: #000;
-  color: #fff;
-  font-weight: 700;
-  border: none;
-  border-radius: 10px 10px 10px 10px;
-  margin-right: 10px; /* 간격 조절 */
-}

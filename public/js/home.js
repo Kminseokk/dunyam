@@ -23,16 +23,14 @@
     topMikaela: function (r) {
       return { value: r.adventure_name, sub: '합계 ' + fmt(r.value) + '회 · ' + r.count + '캐릭터' };
     },
-    topBuffer: function (r) {
-      return { value: r.dundam, sub: r.character_name + ' · ' + r.job_grow_name + ' · ' + r.adventure_name };
-    },
     topCount: function (r) {
       return { value: r.value + '캐릭터', sub: r.adventure_name };
     }
   };
 
+  // data-key 가 없는 카드(아직 공개되지 않은 정보)는 채우지 않는다
   function render(data) {
-    document.querySelectorAll('.highlight-card').forEach(function (card) {
+    document.querySelectorAll('.highlight-card[data-key]').forEach(function (card) {
       var row = data[card.dataset.key];
       var valueEl = card.querySelector('.highlight-value');
       var subEl = card.querySelector('.highlight-sub');
@@ -55,6 +53,6 @@
     .then(render)
     .catch(function (e) {
       console.error(e);
-      document.querySelectorAll('.highlight-sub').forEach(function (el) { el.textContent = '불러오지 못했습니다'; });
+      document.querySelectorAll('.highlight-card[data-key] .highlight-sub').forEach(function (el) { el.textContent = '불러오지 못했습니다'; });
     });
 })();

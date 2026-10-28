@@ -9,6 +9,8 @@ export const FASHIONISTA_AURORAS = ['패셔니스타', '대마법사', '제네�
 
 // 타임라인에서 클리어 횟수를 세는 레이드 (레이드 201 + 선발대 210, 하드만)
 export const MIKAELA_RAID = '무너진 성자 미카엘라';
+// 레이드 출시일 (KST). 처음 집계할 때 이 시점부터 센다.
+export const MIKAELA_RELEASE = '2026-08-06 00:00';
 
 export const containsAny = (text: string | null | undefined, names: string[]) =>
   !!text && names.some((name) => text.includes(name));

@@ -66,25 +66,6 @@
           })
         }];
       }
-    },
-    dundam: {
-      title: '던담 통계',
-      summary: function (d) {
-        return { value: fmt(d.summary.characters), unit: '캐릭터', sub: '딜러 ' + fmt(d.summary.dealers) + ' · 버퍼 ' + fmt(d.summary.buffers) + ' (던담 업데이트한 캐릭터 기준)' };
-      },
-      chart: function (d) {
-        var top = d.rows.slice(0, 20);
-        return { label: '평균 딜량(억)', labels: top.map(function (r) { return r.job_grow_name; }), values: top.map(function (r) { return r.avg_value; }) };
-      },
-      tables: function (d) {
-        function rows(list, unit) {
-          return list.map(function (r) { return [r.job_grow_name, fmt(r.count), fmt(r.avg_value) + unit, fmt(r.max_value) + unit]; });
-        }
-        return [
-          { title: '딜러 (직업별 딜량)', head: ['직업', '캐릭터 수', '평균 딜량', '최고 딜량'], rows: rows(d.rows, '억') },
-          { title: '버퍼 (직업별 버프력)', head: ['직업', '캐릭터 수', '평균 버프력', '최고 버프력'], rows: rows(d.buffers, '만') }
-        ];
-      }
     }
   };
 

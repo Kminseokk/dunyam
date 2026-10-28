@@ -57,16 +57,21 @@
             <section class="calc-box" id="detailBox">
               <h2 class="stats-table-title">세부 설정</h2>
               <p class="calc-label calc-label-first">장비 파괴 시</p>
-              <div class="calc-radios">
-                <label><input type="radio" name="destroyMode" value="spare" /> 새 장비로 다시 시작 (0부터)</label>
-                <label><input type="radio" name="destroyMode" value="protect" checked /> 약속과 믿음 사용 (같은 수치에서 재시도)</label>
-              </div>
+              <p class="calc-radios">새 장비로 다시 시작 (0부터)</p>
               <label class="calc-field">
                 <span>보호권 가격</span>
-                <input type="number" id="destroyCost" min="0" placeholder="0" />
+                <input type="text" id="destroyCost" inputmode="numeric" autocomplete="off" placeholder="0" />
                 <em>골드</em>
               </label>
               <p class="calc-hint">빈칸이면 0골드로 계산합니다.</p>
+
+              <div class="calc-options calc-safe-option" id="safeTo10Box" hidden>
+                <label><input type="checkbox" id="safeTo10" /><span>+10까지 안전 증폭 및 증폭대란 이용</span></label>
+                <p class="calc-hint">
+                  +10까지는 안전 증폭(증폭 대란 적용) 평균 비용으로 고정하고, 그 이후만 일반 증폭으로 계산합니다.
+                  파괴되면 새 장비로 +10까지 다시 안전 증폭 비용이 듭니다.
+                </p>
+              </div>
             </section>
 
             <section class="calc-box" id="eventBox">
@@ -76,7 +81,7 @@
               </div>
               <div class="calc-options" id="eventOptions"></div>
               <p class="calc-event-total" id="eventTotal"></p>
-              <p class="calc-hint">체크한 효과는 모든 강화 시도에 적용되며, 성공 확률은 100%를 넘지 않습니다.</p>
+              <p class="calc-hint">체크한 효과는 해당 단계의 시도에 자동으로 적용되며, 성공 확률은 100%를 넘지 않습니다.</p>
             </section>
 
             <details class="calc-box calc-collapse" id="stepDetails">
@@ -150,10 +155,10 @@
           <div class="col-lg-4">
             <div class="widget">
               <h2>DUNYAM.xyz</h2>
-              <address>Design_(프레이)물약</address>
               <ul class="list-unstyled links">
-                <li><a href="mailto:highcw@naver.com">highcw@naver.com</a></li>
-                <li>© 2024 dunyam.xyz All rights reserved.</li>
+                <li>Design_물약</li>
+                <li>이용 문의 : <a href="mailto:support.dunyam@gmail.com">support.dunyam@gmail.com</a></li>
+                <li>© 2026 dunyam.xyz All rights reserved.</li>
                 <li>This site is not associated with NEXON Korea. Data sourced from NEOPLE OpenAPI.</li>
               </ul>
             </div>

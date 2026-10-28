@@ -2,6 +2,7 @@ import {
   AWAKENING_TITLES,
   FASHIONISTA_AURORAS,
   MIKAELA_RAID,
+  MIKAELA_RELEASE,
   QUEEN_CREATURES,
   containsAny,
 } from './rules';
@@ -27,12 +28,13 @@ export interface CharacterBase {
 }
 
 export interface CharacterDetail extends CharacterBase {
-  itemLevelSum: number;
   enchant: 'Y' | 'N';
   title: 'Y' | 'N';
   queenCreature: 'Y' | 'N';
   fashionistaAurora: 'Y' | 'N';
   mikaelaHardCount: number | null;
+  mikaelaBase: number | null;
+  mikaelaCutoff: string | null;
 }
 
 async function call<T>(apiKey: string, path: string, params: Record<string, string> = {}): Promise<T> {
@@ -63,73 +65,93 @@ interface Equipment {
   slotId: string;
   itemName: string;
   enchant?: { status?: { name: string; value: number | string }[] } | null;
-  fixedOption?: { level?: number };
-  customOption?: { level?: number };
 }
 
 function summarizeEquipment(equipment: Equipment[]) {
-  let itemLevelSum = 0;
-  for (const item of equipment) {
-    // 선계(仙) 업그레이드된 장비의 성장 레벨만 합산
-    if (item.itemName.includes('仙')) {
-      itemLevelSum += item.fixedOption?.level ?? item.customOption?.level ?? 0;
-    }
-  }
-
   const support = equipment.find((item) => item.slotId === 'SUPPORT');
   const hasSiv = support?.enchant?.status?.some((s) => s.name === '모든 속성 강화' && Number(s.value) === 12);
   const title = equipment.find((item) => item.slotId === 'TITLE')?.itemName;
 
   return {
-    itemLevelSum,
     enchant: hasSiv ? 'Y' : 'N',
     title: containsAny(title, AWAKENING_TITLES) ? 'Y' : 'N',
   } as const;
 }
 
-// 타임라인 API는 조회 기간이 최대 90일이라 최근 90일만 집계한다.
-function timelineRange() {
-  const kst = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString();
-  const fmt = (iso: string) => iso.slice(0, 16).replace(/[-:]/g, '');
-  const now = new Date();
-  return { startDate: fmt(kst(new Date(now.getTime() - 89 * 86400_000))), endDate: fmt(kst(now)) };
+// ─── 미카엘라 하드 클리어 수 (DB에 누적) ───
+// cutoff 이전 클리어 수(base)는 확정값으로 저장하고, cutoff 이후만 갱신할 때마다 다시 센다.
+// 타임라인 기록이 늦게 올라오는 경우를 위해 cutoff 는 갱신 시점보다 MIKAELA_SETTLE_DAYS 일 전으로 둔다.
+// 처음(cutoff 없음)에는 레이드 출시일부터 센다. 시각은 모두 KST 'yyyy-MM-dd HH:mm' (타임라인 row.date 형식).
+export interface MikaelaState {
+  base: number;
+  cutoff: string | null;
 }
+
+const DAY = 86400_000;
+const MIKAELA_SETTLE_DAYS = 7;
+const TIMELINE_MAX_DAYS = 89; // 타임라인 API는 한 번에 최대 90일까지 조회된다
+const TIMELINE_MAX_PAGES = 3; // 기간 하나당 최대 페이지 (100건씩)
+
+const kstText = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString().slice(0, 16).replace('T', ' ');
+const fromKst = (text: string) => new Date(text.replace(' ', 'T') + ':00+09:00');
+const apiDate = (text: string) => text.replace(/[-:]/g, '').replace(' ', 'T');
 
 interface RaidTimeline {
-  timeline: { next: string | null; rows: { data: { raidName?: string; hard?: boolean } }[] };
+  timeline: { next: string | null; rows: { date: string; data: { raidName?: string; hard?: boolean } }[] };
 }
 
-const TIMELINE_MAX_PAGES = 3;
-
-async function countMikaelaHard(apiKey: string, serverId: string, characterId: string) {
-  const path = `/servers/${enc(serverId)}/characters/${enc(characterId)}/timeline`;
-  try {
-    let count = 0;
+// start ~ end 사이 미카엘라 하드 클리어 시각 목록. 90일씩 나눠 조회하고, 경계 시각은 뒤 기간에만 센다.
+async function mikaelaClearDates(apiKey: string, path: string, start: string, end: string) {
+  const dates: string[] = [];
+  for (let from = start; from < end; ) {
+    const to = [kstText(new Date(fromKst(from).getTime() + TIMELINE_MAX_DAYS * DAY)), end].sort()[0]!;
     let next: string | null = null;
     for (let page = 0; page < TIMELINE_MAX_PAGES; page++) {
       const data: RaidTimeline = await call<RaidTimeline>(
         apiKey,
         path,
-        next ? { next } : { limit: '100', code: '201,210', ...timelineRange() },
+        next ? { next } : { limit: '100', code: '201,210', startDate: apiDate(from), endDate: apiDate(to) },
       );
-      count += data.timeline.rows.filter((row) => row.data.raidName === MIKAELA_RAID && row.data.hard).length;
+      for (const row of data.timeline.rows) {
+        const inRange = row.date >= from && (row.date < to || to === end);
+        if (inRange && row.data.raidName === MIKAELA_RAID && row.data.hard) dates.push(row.date);
+      }
       next = data.timeline.next;
       if (!next) break;
     }
-    return count;
+    from = to;
+  }
+  return dates;
+}
+
+async function countMikaelaHard(apiKey: string, serverId: string, characterId: string, prev: MikaelaState) {
+  const path = `/servers/${enc(serverId)}/characters/${enc(characterId)}/timeline`;
+  const now = new Date();
+  const cutoff = kstText(new Date(now.getTime() - MIKAELA_SETTLE_DAYS * DAY));
+  try {
+    const dates = await mikaelaClearDates(apiKey, path, prev.cutoff ?? MIKAELA_RELEASE, kstText(now));
+    return {
+      mikaelaHardCount: prev.base + dates.length,
+      mikaelaBase: prev.base + dates.filter((d) => d < cutoff).length,
+      mikaelaCutoff: cutoff,
+    };
   } catch (e) {
     console.error('timeline', e);
-    return null;
+    return { mikaelaHardCount: null, mikaelaBase: null, mikaelaCutoff: null }; // 실패 시 저장된 값 유지
   }
 }
 
-export async function getCharacterDetail(apiKey: string, base: CharacterBase): Promise<CharacterDetail> {
+export async function getCharacterDetail(
+  apiKey: string,
+  base: CharacterBase,
+  mikaela: MikaelaState,
+): Promise<CharacterDetail> {
   const path = `/servers/${enc(base.serverId)}/characters/${enc(base.characterId)}`;
-  const [equip, avatar, creature, mikaelaHardCount] = await Promise.all([
+  const [equip, avatar, creature, mikaelaResult] = await Promise.all([
     call<{ equipment?: Equipment[] }>(apiKey, `${path}/equip/equipment`),
     call<{ avatar?: { slotId: string; itemName: string }[] }>(apiKey, `${path}/equip/avatar`),
     call<{ creature?: { itemName: string } | null }>(apiKey, `${path}/equip/creature`),
-    countMikaelaHard(apiKey, base.serverId, base.characterId),
+    countMikaelaHard(apiKey, base.serverId, base.characterId, mikaela),
   ]);
 
   const aurora = avatar.avatar?.find((a) => a.slotId === 'AURORA')?.itemName;
@@ -139,6 +161,6 @@ export async function getCharacterDetail(apiKey: string, base: CharacterBase): P
     ...summarizeEquipment(equip.equipment ?? []),
     queenCreature: containsAny(creature.creature?.itemName, QUEEN_CREATURES) ? 'Y' : 'N',
     fashionistaAurora: containsAny(aurora, FASHIONISTA_AURORAS) ? 'Y' : 'N',
-    mikaelaHardCount,
+    ...mikaelaResult,
   };
 }

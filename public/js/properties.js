@@ -6,8 +6,7 @@
     casillas: '카시야스', hilder: '힐더', anton: '안톤', bakal: '바칼'
   };
   var COLUMNS = [
-    'job_name', 'job_grow_name', 'item_level_sum', 'fame', 'dundam',
-    'enchant', 'queen_creature', 'fashionista_aurora', 'title', 'mikaela_hard_count'
+    'job_name', 'job_grow_name', 'fame', 'enchant', 'queen_creature', 'fashionista_aurora', 'title', 'mikaela_hard_count'
   ];
 
   var adventureName = (new URLSearchParams(location.search).get('search') || '').trim();
@@ -52,18 +51,17 @@
     var tbody = $('characterRows');
     tbody.replaceChildren();
     characters.forEach(function (c) {
-      var color = c.dundam.indexOf('억') >= 0 ? 'row-dealer' : c.dundam.indexOf('만') >= 0 ? 'row-buffer' : '';
       var tr = document.createElement('tr');
 
       var server = cell('td');
-      server.replaceChildren(cell('h6', SERVERS[c.server_id] || c.server_id, 'mb-0 text-sm px-3 py-1 ' + color));
+      server.replaceChildren(cell('h6', SERVERS[c.server_id] || c.server_id, 'mb-0 text-sm px-3 py-1'));
       var name = cell('td');
-      name.replaceChildren(cell('h6', c.character_name, 'mb-0 text-sm ' + color));
+      name.replaceChildren(cell('h6', c.character_name, 'mb-0 text-sm'));
       tr.append(server, name);
 
       COLUMNS.forEach(function (key) {
         var td = cell('td', null, 'align-middle text-center text-sm');
-        td.replaceChildren(cell('span', key === 'fame' ? fmt(c[key]) : c[key], 'text-xs font-weight-bold ' + color));
+        td.replaceChildren(cell('span', key === 'fame' ? fmt(c[key]) : c[key], 'text-xs font-weight-bold'));
         tr.append(td);
       });
       tbody.append(tr);

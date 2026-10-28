@@ -11,7 +11,7 @@
       note: function (d) { return d.minCharacters + '캐릭터 이상 모험단의 평균 명성'; }
     },
     count: { title: '최다 등록 모험단', unit: '캐릭터', column: '등록 캐릭터', note: 'DUNYAM에 등록된 캐릭터 수' },
-    mikaela: { title: '미카엘라 하드 최다 클리어 모험단', unit: '회', column: '클리어 수', note: '모험단 캐릭터의 미카엘라 하드 클리어 합계 (최근 90일)' }
+    mikaela: { title: '미카엘라 하드 최다 클리어 모험단', unit: '회', column: '클리어 수', note: '모험단 캐릭터의 미카엘라 하드 클리어 합계 (출시 이후 누적)' }
   };
 
   var chart = null;

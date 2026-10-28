@@ -1,6 +1,14 @@
 import { COST_TABLES } from './cost';
-import { getDundamValue } from './dundam';
-import { CharacterBase, CharacterDetail, NeopleError, getCharacter, getCharacterDetail, searchCharacters } from './neople';
+// import { getDundamValue } from './dundam'; // 던담 정보 갱신 (사용 중지)
+import {
+  CharacterBase,
+  CharacterDetail,
+  MikaelaState,
+  NeopleError,
+  getCharacter,
+  getCharacterDetail,
+  searchCharacters,
+} from './neople';
 import { MIN_FAME } from './rules';
 import { RANK_TYPES, RankType, getRanking, rankingQuery, refreshAdventureStatements } from './ranking';
 import { STAT_TYPES, StatType, getStatistics } from './statistics';
@@ -12,7 +20,7 @@ interface Env {
 }
 
 const FALLBACK_IMAGE = '/image_class/20240111_update_2.webp';
-const COMING_SOON = ['/guild'];
+const COMING_SOON = ['/guild', '/spec', '/record'];
 const CALCULATOR_TYPES = ['enhance', 'safe', 'amplify', 'safe-amplify'] as const;
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -32,22 +40,36 @@ async function saveCharacter(db: D1Database, adventure: string, c: CharacterDeta
     .prepare(
       `INSERT INTO characters (
         adventure_name, character_uid, server_id, character_name, job_id, job_grow_id, job_name, job_grow_name,
-        item_level_sum, fame, enchant, queen_creature, fashionista_aurora, title, mikaela_hard_count
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+        fame, enchant, queen_creature, fashionista_aurora, title,
+        mikaela_hard_count, mikaela_base, mikaela_cutoff
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
       ON CONFLICT (adventure_name, character_uid) DO UPDATE SET
         server_id = excluded.server_id, character_name = excluded.character_name,
         job_id = excluded.job_id, job_grow_id = excluded.job_grow_id,
         job_name = excluded.job_name, job_grow_name = excluded.job_grow_name,
-        item_level_sum = excluded.item_level_sum, fame = excluded.fame,
+        fame = excluded.fame,
         enchant = excluded.enchant, queen_creature = excluded.queen_creature,
         fashionista_aurora = excluded.fashionista_aurora, title = excluded.title,
-        mikaela_hard_count = excluded.mikaela_hard_count, updated_at = CURRENT_TIMESTAMP`,
+        mikaela_hard_count = COALESCE(excluded.mikaela_hard_count, mikaela_hard_count),
+        mikaela_base = COALESCE(excluded.mikaela_base, mikaela_base),
+        mikaela_cutoff = COALESCE(excluded.mikaela_cutoff, mikaela_cutoff),
+        updated_at = CURRENT_TIMESTAMP`,
     )
     .bind(
       adventure, c.characterId, c.serverId, c.characterName, c.jobId, c.jobGrowId, c.jobName, c.jobGrowName,
-      c.itemLevelSum, c.fame, c.enchant, c.queenCreature, c.fashionistaAurora, c.title, c.mikaelaHardCount,
+      c.fame, c.enchant, c.queenCreature, c.fashionistaAurora, c.title,
+      c.mikaelaHardCount, c.mikaelaBase, c.mikaelaCutoff,
     );
   await db.batch([upsert, ...refreshAdventureStatements(db, adventure)]);
+}
+
+// 저장된 미카엘라 누적 상태 (처음 등록이면 출시일부터 센다)
+async function mikaelaState(db: D1Database, adventure: string, uid: string): Promise<MikaelaState> {
+  const row = await db
+    .prepare(`SELECT mikaela_base, mikaela_cutoff FROM characters WHERE adventure_name = ?1 AND character_uid = ?2`)
+    .bind(adventure, uid)
+    .first<{ mikaela_base: number | null; mikaela_cutoff: string | null }>();
+  return row?.mikaela_cutoff ? { base: row.mikaela_base ?? 0, cutoff: row.mikaela_cutoff } : { base: 0, cutoff: null };
 }
 
 async function deleteCharacter(db: D1Database, adventure: string, uid: string) {
@@ -156,15 +178,13 @@ async function getAdventure(env: Env, request: Request, adventure: string) {
 
 // 메인 화면 업적 카드: 저장된 전체 캐릭터 기준 1위
 async function getHighlights(env: Env) {
-  const character = `SELECT adventure_name, character_name, server_id, job_grow_name, fame, dundam FROM characters`;
   const queries = {
-    topFame: `${character} ORDER BY fame DESC LIMIT 1`,
+    topFame: `SELECT adventure_name, character_name, server_id, job_grow_name, fame FROM characters
+      ORDER BY fame DESC LIMIT 1`,
     // 모험단 기준 카드는 랭킹 페이지와 같은 쿼리의 1위
     topFameSum: rankingQuery('fame-sum', 1),
     topFameAvg: rankingQuery('fame-avg', 1),
     topMikaela: rankingQuery('mikaela', 1),
-    topBuffer: `${character} WHERE dundam LIKE '%만'
-      ORDER BY CAST(REPLACE(dundam, '만', '') AS INTEGER) DESC LIMIT 1`,
     topCount: rankingQuery('count', 1),
   };
   const keys = Object.keys(queries) as (keyof typeof queries)[];
@@ -222,7 +242,8 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
       const member = await findMember(env, adventure, text(body, 'name'));
       const error = registrationError(member);
       if (error || !member) return json({ ok: false, message: error });
-      await saveCharacter(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, member));
+      const mikaela = await mikaelaState(env.DB, adventure, member.characterId);
+      await saveCharacter(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, member, mikaela));
       purgeRankingCache(request, ctx);
       return json({ ok: true });
     }
@@ -247,29 +268,30 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
         return json({ ok: true, deleted: true });
       }
       if (base.adventureName !== adventure) return json({ ok: false, message: '모험단이 변경된 캐릭터입니다.' });
-      await saveCharacter(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, base));
+      const mikaela = await mikaelaState(env.DB, adventure, uid);
+      await saveCharacter(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, base, mikaela));
       purgeRankingCache(request, ctx);
       return json({ ok: true });
     }
 
-    // 던담 수치 갱신
-    case '/api/dundam': {
-      const uid = text(body, 'uid', 64);
-      const row = await env.DB.prepare(
-        `SELECT server_id FROM characters WHERE adventure_name = ?1 AND character_uid = ?2`,
-      )
-        .bind(adventure, uid)
-        .first<{ server_id: string }>();
-      if (!row) return fail('저장된 캐릭터가 아닙니다.', 404);
-
-      const value = await getDundamValue(row.server_id, uid);
-      if (!value) return json({ ok: false, message: '던담 정보를 찾을 수 없습니다.' });
-      await env.DB.prepare(`UPDATE characters SET dundam = ?1 WHERE adventure_name = ?2 AND character_uid = ?3`)
-        .bind(value, adventure, uid)
-        .run();
-      purgeRankingCache(request, ctx); // 명예의 전당 최고 버퍼
-      return json({ ok: true, value });
-    }
+    // 던담 수치 갱신 (사용 중지: characters.dundam 컬럼 삭제됨, src/dundam.ts 참고)
+    // case '/api/dundam': {
+    //   const uid = text(body, 'uid', 64);
+    //   const row = await env.DB.prepare(
+    //     `SELECT server_id FROM characters WHERE adventure_name = ?1 AND character_uid = ?2`,
+    //   )
+    //     .bind(adventure, uid)
+    //     .first<{ server_id: string }>();
+    //   if (!row) return fail('저장된 캐릭터가 아닙니다.', 404);
+    //
+    //   const value = await getDundamValue(row.server_id, uid);
+    //   if (!value) return json({ ok: false, message: '던담 정보를 찾을 수 없습니다.' });
+    //   await env.DB.prepare(`UPDATE characters SET dundam = ?1 WHERE adventure_name = ?2 AND character_uid = ?3`)
+    //     .bind(value, adventure, uid)
+    //     .run();
+    //   purgeRankingCache(request, ctx);
+    //   return json({ ok: true, value });
+    // }
   }
   return fail('Not Found', 404);
 }

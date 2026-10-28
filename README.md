@@ -3,7 +3,7 @@
 Cloudflare Workers(무료 티어) 기반.
 
 - `public/` : 정적 페이지/에셋 (Workers Static Assets)
-- `src/` : API Worker (Neople OpenAPI, 던담 조회, 랭킹·통계 집계)
+- `src/` : API Worker (Neople OpenAPI, 랭킹·통계 집계)
 - `migrations/` : D1(SQLite) 스키마
 
 변경 기록은 [CHANGELOG.md](CHANGELOG.md) 참고.
@@ -15,12 +15,11 @@ Cloudflare Workers(무료 티어) 기반.
 | GET | `/api/adventure?name=` | 모험단 캐릭터 목록과 집계 |
 | GET | `/api/highlights` | 메인 화면 명예의 전당 (엣지 캐시 5분) |
 | GET | `/api/ranking?type=` | 모험단 랭킹 상위 10위. `fame-sum` / `fame-avg` / `count` / `mikaela` (엣지 캐시 5분) |
-| GET | `/api/statistics?type=` | 통계. `server` / `job` / `fame` / `dundam` (엣지 캐시 1시간) |
+| GET | `/api/statistics?type=` | 통계. `server` / `job` / `fame` (엣지 캐시 1시간) |
 | GET | `/api/cost?type=` | 기댓값 계산기 단계별 확률·비용 (`src/cost.ts`). `enhance` / `safe` / `amplify` / `safe-amplify` (엣지 캐시 10분) |
 | POST | `/api/check` | `{adventure, name}` 모험단 소속·등록 가능 여부 확인 |
 | POST | `/api/save` | `{adventure, name}` 캐릭터 추가 |
 | POST | `/api/refresh` | `{adventure, uid}` 캐릭터 1명 갱신 |
-| POST | `/api/dundam` | `{adventure, uid}` 던담 수치 갱신 |
 
 업데이트는 Workers 무료 플랜의 요청당 외부 호출 제한(50회) 때문에 브라우저가 캐릭터별로 나눠 요청한다.
 
