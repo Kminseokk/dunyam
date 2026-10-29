@@ -281,6 +281,105 @@ export async function getUpgradeRecords(
   return records;
 }
 
+// ─── 스펙체크: 캐릭터 스펙 요약 (스탯·세트·장비·크리처·아바타·안개 동화) ───
+interface SpecStatus {
+  status: { name: string; value: number | string }[];
+}
+interface SpecEquipment {
+  equipment?: {
+    slotId: string;
+    slotName: string;
+    itemName: string;
+    itemRarity: string;
+    reinforce: number;
+    amplificationName: string | null;
+    refine: number;
+    itemGradeName?: string;
+    tune?: { status?: { name: string; value: number | string }[] }[];
+  }[];
+  setItemInfo?: {
+    setItemName: string;
+    setItemRarityName: string;
+    active?: { setPoint?: { current: number; max: number } };
+  }[];
+}
+interface SpecAvatar {
+  avatar?: { slotId: string; itemName: string; emblems?: { slotColor?: string; itemName?: string }[] }[];
+}
+interface SpecCreature {
+  creature?: {
+    itemName: string;
+    itemRarity: string;
+    artifact?: { slotColor: string; itemName: string; itemRarity: string }[];
+  } | null;
+}
+interface SpecMist {
+  mistAssimilation?: { level: number; expRate: string } | null;
+}
+
+export async function getSpec(apiKey: string, serverId: string, characterId: string) {
+  const path = `/servers/${enc(serverId)}/characters/${enc(characterId)}`;
+  const [status, equip, avatar, creature, mist] = await Promise.all([
+    call<SpecStatus>(apiKey, `${path}/status`),
+    call<SpecEquipment>(apiKey, `${path}/equip/equipment`),
+    call<SpecAvatar>(apiKey, `${path}/equip/avatar`),
+    call<SpecCreature>(apiKey, `${path}/equip/creature`),
+    call<SpecMist>(apiKey, `${path}/equip/mist-assimilation`).catch(() => ({}) as SpecMist),
+  ]);
+
+  const stat = (name: string) => Number(status.status.find((s) => s.name === name)?.value ?? 0);
+  // 주 스탯은 힘·지능 중 높은 쪽, 크리티컬도 그에 맞춰 물리/마법
+  const physical = stat('힘') >= stat('지능');
+  const elements = ['화', '수', '명', '암'].map((e) => ({ name: `${e}속성 강화`, value: stat(`${e}속성 강화`) }));
+  const element = elements.reduce((a, b) => (b.value > a.value ? b : a));
+  const equipment = (equip.equipment ?? []).filter((e) => e.slotId !== 'TITLE').map((e) => ({
+    slot: e.slotName,
+    name: e.itemName,
+    rarity: e.itemRarity,
+    reinforce: e.reinforce,
+    amplified: !!e.amplificationName,
+    refine: e.refine,
+    grade: e.itemGradeName ?? '',
+    tune: (e.tune ?? []).flatMap((t) => t.status ?? []).filter((s) => s.name).map((s) => `${s.name} ${s.value}`).join(', '),
+  }));
+  // 빈 엠블렘 칸은 itemName 이 없다
+  const platinum = (avatar.avatar ?? []).flatMap((a) => a.emblems ?? [])
+    .filter((e) => e.itemName && (e.slotColor === 'PLATINUM' || e.itemName.includes('플래티넘')));
+
+  return {
+    stats: {
+      fame: stat('모험가 명성'),
+      buffer: stat('버프력') > 0,
+      attack: stat('공격력 증가'),
+      attackAmp: stat('공격력 증폭'),
+      buff: stat('버프력'),
+      buffAmp: stat('버프력 증폭'),
+      mainStat: { name: physical ? '힘' : '지능', value: stat(physical ? '힘' : '지능') },
+      crit: { name: physical ? '물리 크리티컬' : '마법 크리티컬', value: stat(physical ? '물리 크리티컬' : '마법 크리티컬') },
+      element,
+      cooldown: stat('쿨타임 감소'),
+    },
+    title: (equip.equipment ?? []).find((e) => e.slotId === 'TITLE')?.itemName ?? null,
+    sets: (equip.setItemInfo ?? []).map((s) => ({
+      name: s.setItemName,
+      rarity: s.setItemRarityName,
+      point: s.active?.setPoint?.current ?? null,
+      max: s.active?.setPoint?.max ?? null,
+    })),
+    equipment,
+    creature: creature.creature
+      ? {
+          name: creature.creature.itemName,
+          rarity: creature.creature.itemRarity,
+          artifacts: (creature.creature.artifact ?? []).map((a) => ({ color: a.slotColor, name: a.itemName, rarity: a.itemRarity })),
+        }
+      : null,
+    aura: (avatar.avatar ?? []).find((a) => a.slotId === 'AURORA')?.itemName ?? null,
+    platinum: platinum.map((e) => e.itemName!),
+    mist: mist.mistAssimilation ? { level: mist.mistAssimilation.level, rate: mist.mistAssimilation.expRate } : null,
+  };
+}
+
 export async function getCharacterDetail(
   apiKey: string,
   base: CharacterBase,

@@ -61,10 +61,26 @@
               <h2 class="spec-name" id="characterTitle">캐릭터</h2>
               <dl class="spec-facts" id="summary"></dl>
             </aside>
-            <!-- 오른쪽: 스펙 정보 (준비 중) -->
+            <!-- 오른쪽: 스펙 정보 (spec.js 가 /api/spec 결과로 채움) -->
             <div class="spec-detail">
               <h2 class="stats-table-title">스펙 정보</h2>
-              <p class="calc-hint">스펙 정보는 준비 중입니다.</p>
+              <p class="calc-hint" id="specStatus">스펙 정보를 불러오는 중...</p>
+              <div id="specDetail" hidden>
+                <h3 class="spec-heading">핵심 스탯</h3>
+                <div class="calc-summary spec-stats" id="specStats"></div>
+
+                <h3 class="spec-heading">세트 · 장비</h3>
+                <ul class="spec-lines" id="specSummary"></ul>
+                <div class="stats-table-wrap">
+                  <table class="rec-table spec-table">
+                    <thead><tr><th>부위</th><th class="item">아이템</th><th>강화·증폭</th><th>제련</th><th>품급</th><th>조율</th></tr></thead>
+                    <tbody id="specEquipment"></tbody>
+                  </table>
+                </div>
+
+                <h3 class="spec-heading">기타</h3>
+                <dl class="spec-facts spec-etc" id="specEtc"></dl>
+              </div>
             </div>
           </div>
         </section>

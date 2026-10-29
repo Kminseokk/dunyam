@@ -10,6 +10,7 @@ import {
   UPGRADE_MAX_DAYS,
   UPGRADE_START,
   getCharacterDetail,
+  getSpec,
   getUpgradeRecords,
   getWeeklyClears,
   kstDaysBetween,
@@ -237,6 +238,16 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
     if (!found) return json({ ok: false, message: '캐릭터를 찾을 수 없습니다.' });
     const c = await getCharacter(env.NEOPLE_API_KEY, server, found.characterId);
     return json({ ok: true, character: c, start: UPGRADE_START, maxDays: UPGRADE_MAX_DAYS });
+  }
+
+  // 스펙체크: 캐릭터 스펙 요약 (네오플 API 5회)
+  if (request.method === 'GET' && path === '/api/spec') {
+    const params = new URL(request.url).searchParams;
+    const server = params.get('server') ?? '';
+    const id = params.get('id') ?? '';
+    if (!SERVER_IDS.includes(server)) throw new BadRequest('server 값이 올바르지 않습니다.');
+    if (!/^[0-9a-f]{32}$/.test(id)) throw new BadRequest('id 값이 올바르지 않습니다.');
+    return json({ ok: true, spec: await getSpec(env.NEOPLE_API_KEY, server, id) });
   }
 
   // 강화/증폭 기록: 구간 하나(최대 UPGRADE_MAX_DAYS 일). 브라우저가 구간을 나눠 차례로 요청한다

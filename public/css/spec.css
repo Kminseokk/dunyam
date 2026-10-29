@@ -11,7 +11,7 @@
     justify-content: center;
     height: 276px;
     border-radius: 10px;
-    background: radial-gradient(circle at 50% 40%, #2f3542 0%, #22262e 70%); }
+    background: #fff; }
     .stats .spec-avatar img { width: 240px; height: 276px; object-fit: contain; }
   .stats .spec-name {
     margin: 14px 0 10px;
@@ -31,6 +31,16 @@
     .stats .spec-facts dt { font-weight: 400; color: #8a8f98; }
     .stats .spec-facts dd { margin: 0; font-weight: 700; color: #fff; text-align: right; word-break: keep-all; }
   .stats .spec-detail .stats-table-title { margin-top: 0; }
+  .stats .spec-heading { margin: 20px 0 10px; font-size: 15px; font-weight: 700; color: #fff; }
+    .stats .spec-detail .spec-heading:first-child { margin-top: 0; }
+  .stats .calc-summary.spec-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 0; }
+  .stats .spec-lines { margin: 0 0 10px; padding: 0; list-style: none; font-size: 14px; color: #c8c8c8; }
+    .stats .spec-lines li { padding: 2px 0; }
+    .stats .spec-lines b { color: #fff; }
+  .stats table.spec-table td { padding: 6px 8px; }
+  .stats .spec-etc dd { white-space: normal; }
 
+@media (max-width: 767px) {
+  .stats .calc-summary.spec-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 575px) {
   .stats .spec-profile { grid-template-columns: minmax(0, 1fr); } }
