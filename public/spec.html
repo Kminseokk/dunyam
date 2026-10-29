@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>스펙체크 - 던전앤파이터 모험단 검색 사이트</title>
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/statistics.css" />
+    <link rel="stylesheet" href="/css/calculator.css" />
+    <link rel="stylesheet" href="/css/record.css" />
+    <link rel="stylesheet" href="/css/spec.css" />
+  </head>
+  <body>
+    <header id="site-header" class="dy-header"></header>
+    <script src="/js/header.js"></script>
+
+    <main class="stats">
+      <div class="stats-panel calc-panel">
+        <section class="stats-summary">
+          <h1 class="stats-title">스펙체크</h1>
+          <p class="stats-sub">서버와 캐릭터명으로 캐릭터를 검색합니다.</p>
+        </section>
+
+        <!-- 검색 (강화/증폭 기록과 같은 양식) -->
+        <form class="calc-box rec-search" id="specForm">
+          <h2 class="stats-table-title">캐릭터 검색</h2>
+          <div class="rec-search-row">
+            <label class="calc-field rec-server">
+              <span>서버</span>
+              <select name="server">
+                <option value="cain">카인</option>
+                <option value="diregie">디레지에</option>
+                <option value="siroco">시로코</option>
+                <option value="prey">프레이</option>
+                <option value="casillas">카시야스</option>
+                <option value="hilder">힐더</option>
+                <option value="anton">안톤</option>
+                <option value="bakal">바칼</option>
+              </select>
+            </label>
+            <label class="calc-field rec-name">
+              <span>캐릭터명</span>
+              <input name="name" maxlength="32" autocomplete="off" required placeholder="캐릭터 이름을 입력해주세요." />
+            </label>
+            <button type="submit" class="calc-btn primary" id="searchBtn">검색</button>
+          </div>
+        </form>
+        <p class="calc-message" id="specMessage"></p>
+
+        <!-- 검색 결과: 캐릭터 기본 정보 -->
+        <section class="calc-box" id="result" hidden>
+          <div class="spec-profile">
+            <!-- 왼쪽: 캐릭터 이미지(네오플 이미지 서버 img-api 에서 브라우저가 직접 받음) + 기본 정보 -->
+            <aside class="spec-character">
+              <div class="spec-avatar"><img id="characterImage" alt="" /></div>
+              <h2 class="spec-name" id="characterTitle">캐릭터</h2>
+              <dl class="spec-facts" id="summary"></dl>
+            </aside>
+            <!-- 오른쪽: 스펙 정보 (준비 중) -->
+            <div class="spec-detail">
+              <h2 class="stats-table-title">스펙 정보</h2>
+              <p class="calc-hint">스펙 정보는 준비 중입니다.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="site-footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4">
+            <div class="widget">
+              <h2>DUNYAM.xyz</h2>
+              <ul class="list-unstyled links">
+                <li>Design_물약</li>
+                <li>이용 문의 : <a href="mailto:support.dunyam@gmail.com">support.dunyam@gmail.com</a></li>
+                <li>© 2026 dunyam.xyz All rights reserved.</li>
+                <li>This site is not associated with NEXON Korea. Data sourced from NEOPLE OpenAPI.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/spec.js"></script>
+  </body>
+</html>

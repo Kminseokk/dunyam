@@ -1,0 +1,36 @@
+/* 스펙체크: 검색 결과 = 왼쪽(캐릭터 이미지 + 기본 정보) + 오른쪽(스펙 정보) */
+.stats .spec-profile {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding-top: 16px; }
+  .stats .spec-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 276px;
+    border-radius: 10px;
+    background: radial-gradient(circle at 50% 40%, #2f3542 0%, #22262e 70%); }
+    .stats .spec-avatar img { width: 240px; height: 276px; object-fit: contain; }
+  .stats .spec-name {
+    margin: 14px 0 10px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    color: #fff;
+    word-break: keep-all; }
+  .stats .spec-facts { margin: 0; border-top: 1px solid #2d313a; }
+    .stats .spec-facts div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 2px;
+      border-bottom: 1px solid #2d313a;
+      font-size: 14px; }
+    .stats .spec-facts dt { font-weight: 400; color: #8a8f98; }
+    .stats .spec-facts dd { margin: 0; font-weight: 700; color: #fff; text-align: right; word-break: keep-all; }
+  .stats .spec-detail .stats-table-title { margin-top: 0; }
+
+@media (max-width: 575px) {
+  .stats .spec-profile { grid-template-columns: minmax(0, 1fr); } }

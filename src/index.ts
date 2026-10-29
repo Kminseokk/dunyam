@@ -27,7 +27,7 @@ interface Env {
 }
 
 const FALLBACK_IMAGE = '/image_class/20240111_update_2.webp';
-const COMING_SOON = ['/guild', '/spec'];
+const COMING_SOON = ['/guild'];
 const CALCULATOR_TYPES = ['enhance', 'safe', 'amplify', 'safe-amplify'] as const;
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -227,7 +227,7 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
     return edgeCached(request, ctx, COST_TTL, async () => json({ ok: true, type, ...table() }));
   }
 
-  // 강화/증폭 기록: 서버 + 캐릭터 이름으로 캐릭터 찾기
+  // 강화/증폭 기록·스펙체크: 서버 + 캐릭터 이름으로 캐릭터 찾기
   if (request.method === 'GET' && path === '/api/record/character') {
     const params = new URL(request.url).searchParams;
     const server = params.get('server') ?? '';
