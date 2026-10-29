@@ -1,0 +1,21 @@
+/* 스케줄러: 계산기·강화/증폭 기록과 같은 어두운 패널. 진행률 막대는 record.css 의 .rec-progress 사용 */
+.stats .calc-panel > .calc-box { margin-top: 16px; }
+.stats .sch-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 12px; }
+.stats .calc-btn.sch-update { padding: 8px 20px; font-size: 14px; }
+.stats .calc-box-head { align-items: center; }
+.stats .sch-unknown { font-weight: 700; color: #f0b429; }
+
+/* 클리어 표 */
+.stats table.sch-table th, .stats table.sch-table td { text-align: center; white-space: nowrap; vertical-align: middle; }
+.stats table.sch-table .name { text-align: left; }
+.stats table.sch-table .group-start { border-left: 1px solid #2d313a; }
+.stats table.sch-table td.cleared { color: #4a90ff; font-weight: 700; }
+.stats table.sch-table td.none { color: #6b707a; }
+.stats table.sch-table td.unknown { color: #f0b429; }
+.stats table.sch-table td.empty { padding: 24px; color: #8a8f98; }
+
+@media (max-width: 575px) {
+  .stats .sch-search-row { grid-template-columns: minmax(0, 1fr); } }

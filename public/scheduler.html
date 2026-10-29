@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>스케줄러 - 던전앤파이터 모험단 검색 사이트</title>
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/statistics.css" />
+    <link rel="stylesheet" href="/css/calculator.css" />
+    <link rel="stylesheet" href="/css/record.css" />
+    <link rel="stylesheet" href="/css/scheduler.css" />
+  </head>
+  <body>
+    <header id="site-header" class="dy-header"></header>
+    <script src="/js/header.js"></script>
+
+    <main class="stats">
+      <div class="stats-panel calc-panel">
+        <section class="stats-summary">
+          <h1 class="stats-title">스케줄러</h1>
+          <p class="stats-sub">이번 주(목요일 06:00 초기화) 레기온·레이드 클리어 현황입니다.</p>
+        </section>
+
+        <!-- 모험단 검색 -->
+        <form class="calc-box" id="adventureForm">
+          <h2 class="stats-table-title">모험단 검색</h2>
+          <div class="sch-search-row">
+            <label class="calc-field">
+              <span>모험단 이름</span>
+              <input name="adventure" maxlength="32" autocomplete="off" required placeholder="모험단 이름을 입력해주세요." />
+            </label>
+            <button type="submit" class="calc-btn primary">검색</button>
+          </div>
+          <p class="calc-hint">DUNYAM에 등록된 캐릭터만 보입니다. 캐릭터 등록은 모험단 검색 결과 페이지에서 할 수 있습니다.</p>
+        </form>
+        <p class="calc-message" id="message"></p>
+
+        <!-- 클리어 현황 -->
+        <section class="calc-box" id="result" hidden>
+          <div class="calc-box-head">
+            <h2 class="stats-table-title" id="adventureTitle">모험단</h2>
+            <button type="button" class="calc-btn primary sch-update" id="updateBtn">업데이트</button>
+          </div>
+          <p class="calc-hint">업데이트 버튼을 누르면 클리어 정보가 갱신됩니다. <span class="sch-unknown">?</span> 는 이번 주에 아직 업데이트하지 않은 캐릭터입니다.</p>
+
+          <div class="rec-progress" id="progressBox" hidden>
+            <div class="rec-progress-head">
+              <span id="progressText">업데이트 중...</span>
+              <strong id="progressPct">0%</strong>
+            </div>
+            <div class="rec-progress-bar"><div id="progressBar"></div></div>
+          </div>
+
+          <div class="stats-table-wrap">
+            <!-- 머리글: 1줄 = 서버·캐릭터명 | 레기온 | 레이드, 2줄 = 레기온·레이드 이름 (scheduler.js 에서 생성) -->
+            <table class="sch-table">
+              <thead id="clearHead"></thead>
+              <tbody id="characterRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="site-footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4">
+            <div class="widget">
+              <h2>DUNYAM.xyz</h2>
+              <ul class="list-unstyled links">
+                <li>Design_물약</li>
+                <li>이용 문의 : <a href="mailto:support.dunyam@gmail.com">support.dunyam@gmail.com</a></li>
+                <li>© 2026 dunyam.xyz All rights reserved.</li>
+                <li>This site is not associated with NEXON Korea. Data sourced from NEOPLE OpenAPI.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/scheduler.js"></script>
+  </body>
+</html>

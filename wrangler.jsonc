@@ -10,7 +10,7 @@
     "not_found_handling": "404-page",
     // 정적 파일이 없는 경로 중 Worker가 처리해야 하는 것 (브라우저 페이지 이동은 지정하지 않으면 바로 404 페이지로 감)
     "run_worker_first": ["/api/*", "/rank", "/rank/*", "/data", "/statistics", "/statistics/*",
-      "/calculator", "/calculator/*", "/guild", "/spec", "/record"]
+      "/calculator", "/calculator/*", "/guild", "/spec", "/record", "/scheduler"]
   },
   "d1_databases": [
     {

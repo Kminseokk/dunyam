@@ -10,6 +10,7 @@ var MENU = [
   { label: '증폭 기댓값 계산기', href: '/calculator/amplify', match: ['/calculator/safe-amplify'], badge: 'N' },
   { label: '스펙체크', href: '/spec' },
   { label: '강화/증폭 기록', href: '/record' },
+  { label: '스케줄러', href: '/scheduler' },
   { label: '길드', href: '/guild', badge: 'test' },
   //{ label: '안내 사항', href: '/about' }
 ];

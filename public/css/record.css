@@ -1,0 +1,68 @@
+/* 강화/증폭 기록: 통계·계산기의 어두운 패널 위에 검색·진행률·기록 표만 추가 */
+.stats .calc-panel > .calc-box,
+.stats #result > .calc-box { margin-top: 16px; }
+
+/* 검색 */
+.stats .rec-search-row {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 120px;
+  gap: 12px;
+  align-items: stretch; }
+
+/* 진행률 */
+.stats .rec-progress { margin-top: 16px; }
+  .stats .rec-progress-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #c8c8c8; }
+    .stats .rec-progress-head strong { color: #4a90ff; }
+  .stats .rec-progress-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #2a2e37;
+    overflow: hidden; }
+    .stats .rec-progress-bar div {
+      width: 0;
+      height: 100%;
+      background: #4a90ff;
+      transition: width .2s ease; }
+.stats .calc-message:empty { display: none; }
+
+/* 요약 카드 4칸 */
+.stats .calc-summary.rec-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .stats .rec-summary em { display: block; margin-top: 2px; font-style: normal; font-size: 12px; color: #8a8f98; }
+
+/* 기록 표 */
+.stats table.rec-table th, .stats table.rec-table td { text-align: center; white-space: nowrap; }
+.stats table.rec-table td.item { text-align: left; }
+.stats table.rec-table thead th.item { text-align: left; }
+.stats table.rec-table .ok { color: #4a90ff; font-weight: 700; }
+.stats table.rec-table .fail { color: #ff6b6b; }
+.stats table.rec-table .muted { color: #6b707a; }
+/* 아이템 등급 색 */
+.stats .rarity-커먼 { color: #ddd; }
+.stats .rarity-언커먼 { color: #68d5ed; }
+.stats .rarity-레어 { color: #b36bff; }
+.stats .rarity-유니크 { color: #ff00ff; }
+.stats .rarity-레전더리 { color: #ff7800; }
+.stats .rarity-에픽 { color: #ffb400; }
+.stats .rarity-태초 { color: #4cf0c4; }
+
+/* 필터 */
+.stats .rec-filter { display: flex; gap: 4px; }
+  .stats .rec-filter button {
+    padding: 4px 12px;
+    border: 1px solid #3a3f4a;
+    border-radius: 14px;
+    background: transparent;
+    font-size: 13px;
+    color: #c8c8c8;
+    cursor: pointer; }
+    .stats .rec-filter button.active { border-color: #4a90ff; background: #4a90ff; color: #fff; }
+.stats .rec-more { width: 100%; margin-top: 12px; }
+
+@media (max-width: 767px) {
+  .stats .rec-search-row { grid-template-columns: minmax(0, 1fr); }
+  .stats .calc-summary.rec-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

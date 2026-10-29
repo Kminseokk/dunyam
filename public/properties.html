@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="/assets/css/material-dashboard.min.css" />
     <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/properties.css" />
   </head>
   <body>
     <header id="site-header" class="dy-header"></header>
@@ -48,45 +49,39 @@
 
     <main class="main-content position-relative h-100 border-radius-lg">
       <div class="container-fluid py-4">
-        <div class="row">
-          <div class="col-md-4 mb-md-0 mb-4">
-            <div class="card">
-              <div class="card-header p-3 pt-2">
-                <div class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute">
-                  <i class="material-icons opacity-10">person</i>
-                </div>
-                <div class="text-end pt-1">
-                  <p class="text-sm mb-0 text-capitalize">모험단 평균 명성</p>
-                  <h4 class="mb-0" id="fame_avg">NN,NNN</h4>
-                </div>
-              </div>
+        <!-- 모험단 요약 (메인 명예의 전당 카드와 같은 스타일) -->
+        <div class="adv-stats">
+          <div class="adv-stat">
+            <div class="adv-stat-text">
+              <span class="adv-stat-label">등록 캐릭터 수</span>
+              <strong class="adv-stat-value"><span id="character_count">-</span><small>명</small></strong>
+              <span class="adv-stat-sub">이 모험단에 등록된 캐릭터</span>
             </div>
+            <i class="material-icons adv-stat-icon" aria-hidden="true">badge</i>
           </div>
-          <div class="col-md-4 mb-md-0 mb-4">
-            <div class="card">
-              <div class="card-header p-3 pt-2">
-                <div class="icon icon-lg icon-shape bg-gradient-success shadow-success text-center border-radius-xl mt-n4 position-absolute">
-                  <i class="material-icons opacity-10">person</i>
-                </div>
-                <div class="text-end pt-1">
-                  <p class="text-sm mb-0 text-capitalize">모험단 명성 총합</p>
-                  <h4 class="mb-0" id="fame_sum">NN,NNN</h4>
-                </div>
-              </div>
+          <div class="adv-stat">
+            <div class="adv-stat-text">
+              <span class="adv-stat-label">모험단 평균 명성</span>
+              <strong class="adv-stat-value" id="fame_avg">-</strong>
+              <span class="adv-stat-sub">등록된 캐릭터 평균</span>
             </div>
+            <i class="material-icons adv-stat-icon" aria-hidden="true">person</i>
           </div>
-          <div class="col-md-4">
-            <div class="card">
-              <div class="card-header p-3 pt-2">
-                <div class="icon icon-lg icon-shape bg-gradient-info shadow-info text-center border-radius-xl mt-n4 position-absolute">
-                  <i class="material-icons opacity-10">weekend</i>
-                </div>
-                <div class="text-end pt-1">
-                  <p class="text-sm mb-0 text-capitalize">미카엘라 하드 클리어 수 </p>
-                  <h4 class="mb-0" id="mikaela_hard_sum">NN회</h4>
-                </div>
-              </div>
+          <div class="adv-stat">
+            <div class="adv-stat-text">
+              <span class="adv-stat-label">모험단 명성 총합</span>
+              <strong class="adv-stat-value" id="fame_sum">-</strong>
+              <span class="adv-stat-sub">등록된 캐릭터 합계</span>
             </div>
+            <i class="material-icons adv-stat-icon" aria-hidden="true">groups</i>
+          </div>
+          <div class="adv-stat">
+            <div class="adv-stat-text">
+              <span class="adv-stat-label">미카엘라 하드 클리어 수</span>
+              <strong class="adv-stat-value"><span id="mikaela_hard_sum">-</span><small>회</small></strong>
+              <span class="adv-stat-sub">출시 이후 누적 · 선발대 포함</span>
+            </div>
+            <i class="material-icons adv-stat-icon" aria-hidden="true">shield</i>
           </div>
         </div>
 

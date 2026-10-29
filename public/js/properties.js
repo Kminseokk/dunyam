@@ -44,6 +44,7 @@
         '\n명성 | ' + fmt(top.fame);
     }
 
+    $('character_count').innerText = fmt(characters.length);
     $('fame_sum').innerText = fmt(data.fameSum);
     $('fame_avg').innerText = fmt(data.fameAvg);
     $('mikaela_hard_sum').innerText = fmt(data.mikaelaHardSum);

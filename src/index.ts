@@ -6,7 +6,14 @@ import {
   MikaelaState,
   NeopleError,
   getCharacter,
+  SERVER_IDS,
+  UPGRADE_MAX_DAYS,
+  UPGRADE_START,
   getCharacterDetail,
+  getUpgradeRecords,
+  getWeeklyClears,
+  kstDaysBetween,
+  nowKst,
   searchCharacters,
 } from './neople';
 import { MIN_FAME } from './rules';
@@ -20,7 +27,7 @@ interface Env {
 }
 
 const FALLBACK_IMAGE = '/image_class/20240111_update_2.webp';
-const COMING_SOON = ['/guild', '/spec', '/record'];
+const COMING_SOON = ['/guild', '/spec'];
 const CALCULATOR_TYPES = ['enhance', 'safe', 'amplify', 'safe-amplify'] as const;
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -220,6 +227,38 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
     return edgeCached(request, ctx, COST_TTL, async () => json({ ok: true, type, ...table() }));
   }
 
+  // 강화/증폭 기록: 서버 + 캐릭터 이름으로 캐릭터 찾기
+  if (request.method === 'GET' && path === '/api/record/character') {
+    const params = new URL(request.url).searchParams;
+    const server = params.get('server') ?? '';
+    if (!SERVER_IDS.includes(server)) throw new BadRequest('server 값이 올바르지 않습니다.');
+    const name = text({ name: params.get('name') }, 'name');
+    const found = (await searchCharacters(env.NEOPLE_API_KEY, server, name))[0];
+    if (!found) return json({ ok: false, message: '캐릭터를 찾을 수 없습니다.' });
+    const c = await getCharacter(env.NEOPLE_API_KEY, server, found.characterId);
+    return json({ ok: true, character: c, start: UPGRADE_START, maxDays: UPGRADE_MAX_DAYS });
+  }
+
+  // 강화/증폭 기록: 구간 하나(최대 UPGRADE_MAX_DAYS 일). 브라우저가 구간을 나눠 차례로 요청한다
+  if (request.method === 'GET' && path === '/api/record/timeline') {
+    const params = new URL(request.url).searchParams;
+    const server = params.get('server') ?? '';
+    const id = params.get('id') ?? '';
+    const start = params.get('start') ?? '';
+    const datePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+    // 브라우저 시계가 조금 빠르면 끝 시각이 미래일 수 있어 지금으로 맞춘다 (미래 시각은 타임라인 API 오류)
+    const now = nowKst();
+    const end = [params.get('end') ?? '', now].sort()[0]!;
+    if (!SERVER_IDS.includes(server)) throw new BadRequest('server 값이 올바르지 않습니다.');
+    if (!/^[0-9a-f]{32}$/.test(id)) throw new BadRequest('id 값이 올바르지 않습니다.');
+    if (!datePattern.test(start) || !datePattern.test(end) || start < UPGRADE_START || start >= end) {
+      throw new BadRequest('기간이 올바르지 않습니다.');
+    }
+    if (kstDaysBetween(start, end) > UPGRADE_MAX_DAYS) throw new BadRequest('기간은 최대 89일입니다.');
+    const records = await getUpgradeRecords(env.NEOPLE_API_KEY, server, id, start, end, params.get('last') === '1');
+    return json({ ok: true, records });
+  }
+
   if (request.method === 'GET' && path === '/api/adventure') {
     const adventure = text({ name: new URL(request.url).searchParams.get('name') }, 'name');
     return getAdventure(env, request, adventure);
@@ -271,6 +310,26 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
       const mikaela = await mikaelaState(env.DB, adventure, uid);
       await saveCharacter(env.DB, adventure, await getCharacterDetail(env.NEOPLE_API_KEY, base, mikaela));
       purgeRankingCache(request, ctx);
+      return json({ ok: true });
+    }
+
+    // 스케줄러: 캐릭터 1명의 이번 주 레이드·레기온 클리어 기록 갱신
+    case '/api/clears': {
+      const uid = text(body, 'uid', 64);
+      const row = await env.DB.prepare(
+        `SELECT server_id FROM characters WHERE adventure_name = ?1 AND character_uid = ?2`,
+      )
+        .bind(adventure, uid)
+        .first<{ server_id: string }>();
+      if (!row) return fail('저장된 캐릭터가 아닙니다.', 404);
+
+      const weekly = await getWeeklyClears(env.NEOPLE_API_KEY, row.server_id, uid);
+      await env.DB.prepare(
+        `UPDATE characters SET clears = ?1, clears_updated_at = CURRENT_TIMESTAMP
+        WHERE adventure_name = ?2 AND character_uid = ?3`,
+      )
+        .bind(JSON.stringify(weekly), adventure, uid)
+        .run();
       return json({ ok: true });
     }
 
