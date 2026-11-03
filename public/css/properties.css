@@ -47,6 +47,147 @@
     color: #fff;
     font-size: 24px; }
 
+/* 캐릭터 이름 → 스펙체크 링크 */
+.spec-link { display: inline-flex; align-items: center; gap: 3px; color: inherit; text-decoration: none; }
+  .spec-link:hover { color: #1c7ed6; text-decoration: underline; }
+  .spec-link .spec-link-icon { font-size: 11px; color: #adb5bd; transition: transform 0.15s, color 0.15s; }
+  .spec-link:hover .spec-link-icon { color: #1c7ed6; transform: translateX(2px); }
+
+/* 캐릭터 장비: 캐릭터 한 명을 한 줄로 (좁은 화면에서는 표가 가로로 스크롤) */
+.eq-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  font-size: 13px; }
+  .eq-table th {
+    padding: 8px 8px;
+    border-bottom: 1px solid #e6e8eb;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    color: #8a8f98; }
+    .eq-table th:first-child { padding-left: 24px; text-align: left; }
+  .eq-table td {
+    padding: 8px;
+    border-bottom: 1px solid #f0f1f3;
+    text-align: center;
+    vertical-align: middle; }
+  .eq-table .eq-who { display: flex; align-items: center; gap: 10px; padding-left: 24px; text-align: left; white-space: nowrap; }
+    .eq-table .eq-who div { display: flex; flex-direction: column; line-height: 1.3; }
+    .eq-table .eq-who strong { font-size: 14px; color: #111; }
+    .eq-table .eq-who span { font-size: 11px; color: #8a8f98; }
+  /* 캐릭터 이미지(200×230)에서 얼굴 쪽만 잘라 확대 */
+  .eq-table .eq-face {
+    position: relative;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f1f3f5; }
+    /* 얼굴이 키에 따라 y 75~115 쯤에 있어 (95, 105) 주변 약 90px 를 44px 칸에 맞춘다 (상반신까지 넉넉하게) */
+    .eq-table .eq-face img { position: absolute; left: -24px; top: -29px; width: 98px; max-width: none; }
+  .eq-table .eq-fame { font-weight: 700; color: #111; white-space: nowrap; }
+  .eq-table .eq-loading { font-size: 12px; color: #8a8f98; }
+  .eq-table .eq-icons { display: flex; justify-content: center; align-items: flex-start; gap: 12px; }
+  .eq-table .eq-icon-group { display: flex; align-items: flex-start; gap: 3px; }
+  .eq-table .eq-icon {
+    position: relative;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border: 2px solid #d5d8dc;
+    border-radius: 6px;
+    background: #2a2d33; }
+    .eq-table .eq-icon img { display: block; width: 26px; height: 26px; }
+  /* 강화·증폭 수치 (아이콘 오른쪽 아래), 마법부여 없음 (오른쪽 위 빨간 점) */
+  .eq-table .eq-up {
+    position: absolute;
+    right: -4px;
+    bottom: -5px;
+    padding: 0 2px;
+    border-radius: 3px;
+    background: #111;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 12px;
+    color: #fff; }
+    .eq-table .eq-up.amp { background: #8a3ffc; }
+  .eq-table .eq-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 9px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #e03131; }
+  /* 장비 칸 = 아이콘 + 아래 마법부여 등급 */
+  .eq-table .eq-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .eq-table .eq-grade {
+    min-width: 32px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 15px;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+    color: #fff; }
+    .eq-table .eq-grade.grade-종결 { background: #1c7ed6; }
+    .eq-table .eq-grade.grade-준종결 { background: #e03131; }
+    .eq-table .eq-grade.grade-보급 { background: #adb5bd; }
+    .eq-table .eq-grade.grade-없음 { border: 1px solid #ced4da; background: #fff; line-height: 13px; color: #868e96; }
+  .eq-table .eq-grade[data-tip] { cursor: help; }
+  /* 올 블루 (달성: 종결 색, 미달성: 회색) */
+  .eq-table .eq-allblue {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #e9ecef;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: #868e96;
+    cursor: help; }
+    .eq-table .eq-allblue.done { background: #1c7ed6; color: #fff; }
+/* 등급에 마우스를 올리면 뜨는 마법부여 옵션 (표 스크롤 영역에 잘리지 않게 화면 기준 고정 위치) */
+.eq-tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 220px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #111;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-line;
+  color: #fff;
+  pointer-events: none; }
+  .eq-table .eq-item { display: flex; align-items: center; gap: 6px; max-width: 120px; margin: 0 auto; text-align: left; }
+    .eq-table .eq-item-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+    .eq-table .eq-item-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; }
+  .eq-table .eq-text { line-height: 1.3; white-space: nowrap; }
+  .eq-table .eq-name { font-size: 12px; font-weight: 700; color: #333; }
+  .eq-table .eq-sub { font-size: 11px; color: #8a8f98; }
+  .eq-table .muted { color: #adb5bd; }
+  /* 아이템 등급 색 (흰 배경용으로 진하게, 아이콘 테두리는 게임 색) */
+  .eq-table .rarity-커먼 { color: #868e96; }
+  .eq-table .rarity-언커먼 { color: #1c7ed6; }
+  .eq-table .rarity-레어 { color: #9c36b5; }
+  .eq-table .rarity-유니크 { color: #d6336c; }
+  .eq-table .rarity-레전더리 { color: #e8590c; }
+  .eq-table .rarity-에픽 { color: #e09a00; }
+  .eq-table .rarity-태초 { color: #0ca678; }
+  .eq-table .eq-icon.rarity-레어 { border-color: #b36bff; }
+  .eq-table .eq-icon.rarity-유니크 { border-color: #ff4fd8; }
+  .eq-table .eq-icon.rarity-레전더리 { border-color: #ff7800; }
+  .eq-table .eq-icon.rarity-에픽 { border-color: #ffb400; }
+  .eq-table .eq-icon.rarity-태초 { border-color: #4dffc3; }
+
 @media (max-width: 1199px) {
   .adv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 575px) {

@@ -10,6 +10,7 @@ import {
   UPGRADE_MAX_DAYS,
   UPGRADE_START,
   getCharacterDetail,
+  getEquipView,
   getSpec,
   getUpgradeRecords,
   getWeeklyClears,
@@ -48,16 +49,13 @@ async function saveCharacter(db: D1Database, adventure: string, c: CharacterDeta
     .prepare(
       `INSERT INTO characters (
         adventure_name, character_uid, server_id, character_name, job_id, job_grow_id, job_name, job_grow_name,
-        fame, enchant, queen_creature, fashionista_aurora, title,
-        mikaela_hard_count, mikaela_base, mikaela_cutoff
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+        fame, mikaela_hard_count, mikaela_base, mikaela_cutoff
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
       ON CONFLICT (adventure_name, character_uid) DO UPDATE SET
         server_id = excluded.server_id, character_name = excluded.character_name,
         job_id = excluded.job_id, job_grow_id = excluded.job_grow_id,
         job_name = excluded.job_name, job_grow_name = excluded.job_grow_name,
         fame = excluded.fame,
-        enchant = excluded.enchant, queen_creature = excluded.queen_creature,
-        fashionista_aurora = excluded.fashionista_aurora, title = excluded.title,
         mikaela_hard_count = COALESCE(excluded.mikaela_hard_count, mikaela_hard_count),
         mikaela_base = COALESCE(excluded.mikaela_base, mikaela_base),
         mikaela_cutoff = COALESCE(excluded.mikaela_cutoff, mikaela_cutoff),
@@ -65,8 +63,7 @@ async function saveCharacter(db: D1Database, adventure: string, c: CharacterDeta
     )
     .bind(
       adventure, c.characterId, c.serverId, c.characterName, c.jobId, c.jobGrowId, c.jobName, c.jobGrowName,
-      c.fame, c.enchant, c.queenCreature, c.fashionistaAurora, c.title,
-      c.mikaelaHardCount, c.mikaelaBase, c.mikaelaCutoff,
+      c.fame, c.mikaelaHardCount, c.mikaelaBase, c.mikaelaCutoff,
     );
   await db.batch([upsert, ...refreshAdventureStatements(db, adventure)]);
 }
@@ -109,6 +106,7 @@ async function edgeCached(request: Request, ctx: ExecutionContext, ttl: number, 
 const RANKING_TTL = 300;
 const STATISTICS_TTL = 3600;
 const COST_TTL = 600; // cost.ts 는 배포 때만 바뀜
+const EQUIP_TTL = 300;
 
 // 캐릭터가 바뀌면 이 데이터센터의 명예의 전당·랭킹 캐시를 비움 (다른 데이터센터는 ttl 후 갱신)
 function purgeRankingCache(request: Request, ctx: ExecutionContext) {
@@ -178,7 +176,6 @@ async function getAdventure(env: Env, request: Request, adventure: string) {
     characters: results,
     representative: top ?? null,
     imagePath: await representativeImage(env, request, top?.job_id, top?.job_grow_id),
-    fameSum,
     fameAvg: results.length ? Math.round(fameSum / results.length) : 0,
     mikaelaHardSum: sum('mikaela_hard_count'),
   });
@@ -248,6 +245,17 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
     if (!SERVER_IDS.includes(server)) throw new BadRequest('server 값이 올바르지 않습니다.');
     if (!/^[0-9a-f]{32}$/.test(id)) throw new BadRequest('id 값이 올바르지 않습니다.');
     return json({ ok: true, spec: await getSpec(env.NEOPLE_API_KEY, server, id) });
+  }
+
+  // 모험단 장비 보기: 캐릭터 한 명의 장비 (네오플 API 3회). 모험단 페이지를 열 때마다 불리므로 엣지 캐시
+  if (request.method === 'GET' && path === '/api/equip') {
+    const params = new URL(request.url).searchParams;
+    const server = params.get('server') ?? '';
+    const id = params.get('id') ?? '';
+    if (!SERVER_IDS.includes(server)) throw new BadRequest('server 값이 올바르지 않습니다.');
+    if (!/^[0-9a-f]{32}$/.test(id)) throw new BadRequest('id 값이 올바르지 않습니다.');
+    return edgeCached(request, ctx, EQUIP_TTL, async () =>
+      json({ ok: true, equip: await getEquipView(env.NEOPLE_API_KEY, server, id) }));
   }
 
   // 강화/증폭 기록: 구간 하나(최대 UPGRADE_MAX_DAYS 일). 브라우저가 구간을 나눠 차례로 요청한다

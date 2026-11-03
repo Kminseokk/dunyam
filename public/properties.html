@@ -69,11 +69,11 @@
           </div>
           <div class="adv-stat">
             <div class="adv-stat-text">
-              <span class="adv-stat-label">모험단 명성 총합</span>
-              <strong class="adv-stat-value" id="fame_sum">-</strong>
-              <span class="adv-stat-sub">등록된 캐릭터 합계</span>
+              <span class="adv-stat-label">올 블루 달성 캐릭터 수</span>
+              <strong class="adv-stat-value"><span id="allblue_count">-</span><small>명</small></strong>
+              <span class="adv-stat-sub">마법부여 · 칭호 · 크리처 · 오라 모두 종결</span>
             </div>
-            <i class="material-icons adv-stat-icon" aria-hidden="true">groups</i>
+            <i class="material-icons adv-stat-icon" aria-hidden="true">verified</i>
           </div>
           <div class="adv-stat">
             <div class="adv-stat-text">
@@ -97,6 +97,7 @@
                       <button class="all-update-btn" type="button" data-update="dundam">던담 업데이트</button> -->
                       <button class="all-update-btn" type="button" data-update="refresh">업데이트</button>
                       <span class="text-sm ms-2" id="updateProgress"></span>
+                      <span class="text-sm ms-2" id="equipProgress"></span>
                     </h6>
                     <p class="text-sm mb-0">
                       <i class="fa fa-check text-info" aria-hidden="true"></i>
@@ -106,12 +107,34 @@
                       <i class="fa fa-check text-info" aria-hidden="true"></i>
                       <span class="font-weight-bold ms-1">업데이트 기능은</span> 시간이 소요 됩니다. 캐릭터가 많을수록 많은 시간이 요구됩니다.
                     </p>
+                    <p class="text-sm mb-0">
+                      <i class="fa fa-check text-info" aria-hidden="true"></i>
+                      <span class="font-weight-bold ms-1">장비 아이콘에 마우스를 올리면</span> 아이템 이름 · 강화 · 증폭 · 마법부여를 볼 수 있습니다.
+                    </p>
+                    <p class="text-sm mb-0">
+                      <i class="fa fa-check text-info" aria-hidden="true"></i>
+                      <span class="font-weight-bold ms-1">빨간 점</span>은 마법부여가 없는 부위입니다. (방어구 · 악세사리 · 특수장비 11부위 기준)
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div class="card-body px-0 pb-2">
+                <!-- 캐릭터 장비 (properties.js 가 캐릭터마다 /api/equip 으로 채움) -->
                 <div class="table-responsive">
+                  <table class="eq-table">
+                    <thead>
+                      <tr>
+                        <th>캐릭터</th><th>명성</th><th>세트</th><th>올 블루</th><th>장비 / 마법부여</th>
+                        <th>칭호</th><th>크리처</th><th>오라</th>
+                      </tr>
+                    </thead>
+                    <tbody id="equipRows"></tbody>
+                  </table>
+                </div>
+
+                <!-- 기존 캐릭터 리스트 (숨김) -->
+                <div class="table-responsive" hidden>
                   <table class="table align-items-center mb-0">
                     <thead>
                       <tr>
@@ -120,10 +143,6 @@
                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">뿌리 직업</th>
                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">직업 명</th>
                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">명성</th>
-                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">시브</th>
-                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">나비</th>
-                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">오라</th>
-                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">칭호</th>
                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">미카엘라 하드</th>
                       </tr>
                     </thead>
@@ -164,6 +183,7 @@
 
     <script src="/js/aos.js"></script>
     <script src="/js/custom.js"></script>
+    <script src="/js/equip.js"></script>
     <script src="/js/properties.js"></script>
   </body>
 </html>

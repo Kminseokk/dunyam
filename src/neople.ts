@@ -1,10 +1,13 @@
 import {
-  AWAKENING_TITLES,
-  FASHIONISTA_AURORAS,
+  AURA_GRADES,
+  CREATURE_GRADES,
+  ENCHANT_GRADES,
   MIKAELA_RAID,
   MIKAELA_RELEASE,
-  QUEEN_CREATURES,
-  containsAny,
+  TITLE_GRADES,
+  TITLE_GRADES_BUFFER,
+  gradeOf,
+  isBufferJob,
 } from './rules';
 
 const API = 'https://api.neople.co.kr/df';
@@ -28,10 +31,6 @@ export interface CharacterBase {
 }
 
 export interface CharacterDetail extends CharacterBase {
-  enchant: 'Y' | 'N';
-  title: 'Y' | 'N';
-  queenCreature: 'Y' | 'N';
-  fashionistaAurora: 'Y' | 'N';
   mikaelaHardCount: number | null;
   mikaelaBase: number | null;
   mikaelaCutoff: string | null;
@@ -59,23 +58,6 @@ export async function searchCharacters(apiKey: string, serverId: string, name: s
 
 export function getCharacter(apiKey: string, serverId: string, characterId: string) {
   return call<CharacterBase>(apiKey, `/servers/${enc(serverId)}/characters/${enc(characterId)}`);
-}
-
-interface Equipment {
-  slotId: string;
-  itemName: string;
-  enchant?: { status?: { name: string; value: number | string }[] } | null;
-}
-
-function summarizeEquipment(equipment: Equipment[]) {
-  const support = equipment.find((item) => item.slotId === 'SUPPORT');
-  const hasSiv = support?.enchant?.status?.some((s) => s.name === '모든 속성 강화' && Number(s.value) === 12);
-  const title = equipment.find((item) => item.slotId === 'TITLE')?.itemName;
-
-  return {
-    enchant: hasSiv ? 'Y' : 'N',
-    title: containsAny(title, AWAKENING_TITLES) ? 'Y' : 'N',
-  } as const;
 }
 
 // ─── 미카엘라 하드 클리어 수 (DB에 누적) ───
@@ -286,9 +268,11 @@ interface SpecStatus {
   status: { name: string; value: number | string }[];
 }
 interface SpecEquipment {
+  jobGrowName?: string;
   equipment?: {
     slotId: string;
     slotName: string;
+    itemId: string;
     itemName: string;
     itemRarity: string;
     reinforce: number;
@@ -296,6 +280,10 @@ interface SpecEquipment {
     refine: number;
     itemGradeName?: string;
     tune?: { status?: { name: string; value: number | string }[] }[];
+    enchant?: {
+      status?: { name: string; value: number | string }[];
+      reinforceSkill?: { skills?: { value: number }[] }[];
+    } | null;
   }[];
   setItemInfo?: {
     setItemName: string;
@@ -304,10 +292,17 @@ interface SpecEquipment {
   }[];
 }
 interface SpecAvatar {
-  avatar?: { slotId: string; itemName: string; emblems?: { slotColor?: string; itemName?: string }[] }[];
+  avatar?: {
+    slotId: string;
+    itemId?: string;
+    itemName: string;
+    itemRarity?: string;
+    emblems?: { slotColor?: string; itemName?: string }[];
+  }[];
 }
 interface SpecCreature {
   creature?: {
+    itemId: string;
     itemName: string;
     itemRarity: string;
     artifact?: { slotColor: string; itemName: string; itemRarity: string }[];
@@ -332,19 +327,6 @@ export async function getSpec(apiKey: string, serverId: string, characterId: str
   const physical = stat('힘') >= stat('지능');
   const elements = ['화', '수', '명', '암'].map((e) => ({ name: `${e}속성 강화`, value: stat(`${e}속성 강화`) }));
   const element = elements.reduce((a, b) => (b.value > a.value ? b : a));
-  const equipment = (equip.equipment ?? []).filter((e) => e.slotId !== 'TITLE').map((e) => ({
-    slot: e.slotName,
-    name: e.itemName,
-    rarity: e.itemRarity,
-    reinforce: e.reinforce,
-    amplified: !!e.amplificationName,
-    refine: e.refine,
-    grade: e.itemGradeName ?? '',
-    tune: (e.tune ?? []).flatMap((t) => t.status ?? []).filter((s) => s.name).map((s) => `${s.name} ${s.value}`).join(', '),
-  }));
-  // 빈 엠블렘 칸은 itemName 이 없다
-  const platinum = (avatar.avatar ?? []).flatMap((a) => a.emblems ?? [])
-    .filter((e) => e.itemName && (e.slotColor === 'PLATINUM' || e.itemName.includes('플래티넘')));
 
   return {
     stats: {
@@ -359,25 +341,144 @@ export async function getSpec(apiKey: string, serverId: string, characterId: str
       element,
       cooldown: stat('쿨타임 감소'),
     },
-    title: (equip.equipment ?? []).find((e) => e.slotId === 'TITLE')?.itemName ?? null,
+    ...equipView(equip, avatar, creature, await wornOptions(apiKey, equip, avatar, creature)),
+    mist: mist.mistAssimilation ? { level: mist.mistAssimilation.level, rate: mist.mistAssimilation.expRate } : null,
+  };
+}
+
+// 빈 엠블렘 칸은 itemName 이 없다
+function platinumEmblems(avatar: SpecAvatar) {
+  return (avatar.avatar ?? []).flatMap((a) => a.emblems ?? [])
+    .filter((e) => e.itemName && (e.slotColor === 'PLATINUM' || e.itemName.includes('플래티넘')))
+    .map((e) => e.itemName!);
+}
+
+// 아바타 요약에 세는 8부위 (오라·무기·스킨 아바타 제외)
+const AVATAR_SLOTS = ['HEADGEAR', 'HAIR', 'FACE', 'BREAST', 'JACKET', 'PANTS', 'WAIST', 'SHOES'];
+
+// ─── 아이템 옵션 (아이템 상세 API) ───
+// 옵션 목록(itemStatus) 밖에 있는 두 가지를 옵션으로 바꿔 넣는다.
+//   - itemReinforceSkill(직업별 패시브 스킬 +N): passive 이름으로 (오라는 '진각성 패시브', 크리처는 '2차 각성 패시브')
+//   - 설명의 'n 레벨 액티브 스킬 공격력 x% 증가': '액티브 스킬 공격력' = 'x% (n레벨)' (등급은 앞의 x 로 판정)
+//   - 레벨 구간 스킬 +N (칭호는 itemBuff.reinforceSkill 의 levelRange): 'a~b 레벨' = '+N'
+// 아이템 옵션은 바뀌지 않으므로 엣지 캐시에 오래 둔다 (캐시 키는 API 키를 뺀 요청 주소)
+const ITEM_TTL = 7 * 24 * 3600;
+type ItemOption = { name: string; value: string };
+interface ReinforceSkill {
+  skills?: { value: number }[];
+  levelRange?: { minLevel: number; maxLevel: number; value: number }[];
+}
+interface ItemDetail {
+  itemStatus?: { name: string; value: number | string }[];
+  itemReinforceSkill?: ReinforceSkill[];
+  itemBuff?: { reinforceSkill?: ReinforceSkill[] } | null;
+  itemExplainDetail?: string;
+}
+
+async function getItemOptions(apiKey: string, itemId: string, passive: string): Promise<ItemOption[]> {
+  const key = new Request(`${API}/items/${enc(itemId)}`);
+  const hit = await caches.default.match(key);
+  if (hit) return hit.json<ItemOption[]>();
+  const detail = await call<ItemDetail>(apiKey, `/items/${enc(itemId)}`);
+  const options = (detail.itemStatus ?? [])
+    .filter((s) => s.name !== '모험가 명성')
+    .map((s) => ({ name: s.name, value: String(s.value) }));
+  const skill = Math.max(0, ...(detail.itemReinforceSkill ?? []).flatMap((j) => j.skills ?? []).map((s) => s.value));
+  if (skill) options.push({ name: passive, value: `+${skill}` });
+  const active = detail.itemExplainDetail?.match(/(\d+)\s*레벨 액티브 스킬 공격력\s*([\d.]+)%\s*증가/);
+  if (active) options.push({ name: '액티브 스킬 공격력', value: `${active[2]}% (${active[1]}레벨)` });
+  for (const r of [...(detail.itemReinforceSkill ?? []), ...(detail.itemBuff?.reinforceSkill ?? [])].flatMap((s) => s.levelRange ?? [])) {
+    options.push({ name: `${r.minLevel}~${r.maxLevel} 레벨`, value: `+${r.value}` });
+  }
+  await caches.default.put(key, new Response(JSON.stringify(options), { headers: { 'Cache-Control': `public, max-age=${ITEM_TTL}` } }));
+  return options;
+}
+
+// 착용한 오라·크리처·칭호의 옵션 (없거나 조회에 실패하면 null → 등급 없음)
+function wornOptions(apiKey: string, equip: SpecEquipment, avatar: SpecAvatar, creature: SpecCreature) {
+  const options = (id: string | undefined, passive: string) =>
+    id ? getItemOptions(apiKey, id, passive).catch(() => null) : Promise.resolve(null);
+  return Promise.all([
+    options(avatar.avatar?.find((a) => a.slotId === 'AURORA')?.itemId, '진각성 패시브'),
+    options(creature.creature?.itemId, '2차 각성 패시브'),
+    options(equip.equipment?.find((e) => e.slotId === 'TITLE')?.itemId, '패시브'),
+  ]);
+}
+
+// 마법부여 옵션과 등급. 버퍼 마법부여의 버프 스킬 +N(reinforceSkill, 직업별로 같은 값)은 '특정 스킬 레벨 증가' 옵션으로 넣는다.
+// 등급 기준이 있는 부위에 마법부여가 없으면 '없음'
+function enchantView(slotId: string, enchant: NonNullable<SpecEquipment['equipment']>[number]['enchant']) {
+  const options: ItemOption[] = (enchant?.status ?? []).map((s) => ({ name: s.name, value: String(s.value) }));
+  const skill = Math.max(0, ...(enchant?.reinforceSkill ?? []).flatMap((j) => j.skills ?? []).map((s) => s.value));
+  if (skill) options.push({ name: '특정 스킬 레벨 증가', value: `+${skill}` });
+  const rule = ENCHANT_GRADES[slotId];
+  return { enchant: options, enchantGrade: options.length || !rule ? gradeOf(rule, options) : '없음' };
+}
+
+// 장비·칭호·세트·크리처·오라·아바타 정리 (스펙체크와 모험단 장비 보기가 같이 씀)
+function equipView(
+  equip: SpecEquipment,
+  avatar: SpecAvatar,
+  creature: SpecCreature,
+  [auraOpts, creatureOpts, titleOpts]: (ItemOption[] | null)[],
+) {
+  const item = (e?: { itemId?: string; itemName: string; itemRarity?: string } | null) =>
+    e ? { id: e.itemId ?? null, name: e.itemName, rarity: e.itemRarity ?? '' } : null;
+  const list = equip.equipment ?? [];
+  const avatars = avatar.avatar ?? [];
+  const parts = avatars.filter((a) => AVATAR_SLOTS.includes(a.slotId));
+
+  return {
+    equipment: list.filter((e) => e.slotId !== 'TITLE').map((e) => ({
+      slot: e.slotId,
+      ...item(e)!,
+      reinforce: e.reinforce,
+      amplified: !!e.amplificationName,
+      refine: e.refine,
+      grade: e.itemGradeName ?? '',
+      tune: (e.tune ?? []).flatMap((t) => t.status ?? []).filter((s) => s.name).map((s) => `${s.name} ${s.value}`).join(', '),
+      ...enchantView(e.slotId, e.enchant),
+    })),
+    title: (() => {
+      const t = item(list.find((e) => e.slotId === 'TITLE'));
+      const rule = isBufferJob(equip.jobGrowName) ? TITLE_GRADES_BUFFER : TITLE_GRADES;
+      return t && { ...t, options: titleOpts ?? [], grade: titleOpts ? gradeOf(rule, titleOpts) : null };
+    })(),
     sets: (equip.setItemInfo ?? []).map((s) => ({
       name: s.setItemName,
       rarity: s.setItemRarityName,
       point: s.active?.setPoint?.current ?? null,
       max: s.active?.setPoint?.max ?? null,
     })),
-    equipment,
     creature: creature.creature
       ? {
-          name: creature.creature.itemName,
-          rarity: creature.creature.itemRarity,
+          ...item(creature.creature)!,
           artifacts: (creature.creature.artifact ?? []).map((a) => ({ color: a.slotColor, name: a.itemName, rarity: a.itemRarity })),
+          options: creatureOpts ?? [],
+          grade: creatureOpts ? gradeOf(CREATURE_GRADES, creatureOpts) : null,
         }
       : null,
-    aura: (avatar.avatar ?? []).find((a) => a.slotId === 'AURORA')?.itemName ?? null,
-    platinum: platinum.map((e) => e.itemName!),
-    mist: mist.mistAssimilation ? { level: mist.mistAssimilation.level, rate: mist.mistAssimilation.expRate } : null,
+    aura: (() => {
+      const a = item(avatars.find((x) => x.slotId === 'AURORA'));
+      return a && { ...a, options: auraOpts ?? [], grade: auraOpts ? gradeOf(AURA_GRADES, auraOpts) : null };
+    })(),
+    avatar: {
+      rare: parts.filter((a) => a.itemRarity === '레어').length,
+      total: AVATAR_SLOTS.length,
+      platinum: platinumEmblems(avatar),
+    },
   };
+}
+
+// ─── 모험단 장비 보기: 캐릭터 한 명의 장비 (네오플 API 3회 + 오라·크리처·칭호 옵션 3회, 옵션은 캐시) ───
+export async function getEquipView(apiKey: string, serverId: string, characterId: string) {
+  const path = `/servers/${enc(serverId)}/characters/${enc(characterId)}`;
+  const [equip, avatar, creature] = await Promise.all([
+    call<SpecEquipment>(apiKey, `${path}/equip/equipment`),
+    call<SpecAvatar>(apiKey, `${path}/equip/avatar`),
+    call<SpecCreature>(apiKey, `${path}/equip/creature`),
+  ]);
+  return equipView(equip, avatar, creature, await wornOptions(apiKey, equip, avatar, creature));
 }
 
 export async function getCharacterDetail(
@@ -385,21 +486,5 @@ export async function getCharacterDetail(
   base: CharacterBase,
   mikaela: MikaelaState,
 ): Promise<CharacterDetail> {
-  const path = `/servers/${enc(base.serverId)}/characters/${enc(base.characterId)}`;
-  const [equip, avatar, creature, mikaelaResult] = await Promise.all([
-    call<{ equipment?: Equipment[] }>(apiKey, `${path}/equip/equipment`),
-    call<{ avatar?: { slotId: string; itemName: string }[] }>(apiKey, `${path}/equip/avatar`),
-    call<{ creature?: { itemName: string } | null }>(apiKey, `${path}/equip/creature`),
-    countMikaelaHard(apiKey, base.serverId, base.characterId, mikaela),
-  ]);
-
-  const aurora = avatar.avatar?.find((a) => a.slotId === 'AURORA')?.itemName;
-
-  return {
-    ...base,
-    ...summarizeEquipment(equip.equipment ?? []),
-    queenCreature: containsAny(creature.creature?.itemName, QUEEN_CREATURES) ? 'Y' : 'N',
-    fashionistaAurora: containsAny(aurora, FASHIONISTA_AURORAS) ? 'Y' : 'N',
-    ...mikaelaResult,
-  };
+  return { ...base, ...(await countMikaelaHard(apiKey, base.serverId, base.characterId, mikaela)) };
 }

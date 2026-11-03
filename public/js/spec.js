@@ -98,45 +98,100 @@
       return div;
     }));
 
-    // 세트·장비 요약: 세트 포인트, 강화·증폭 합계, 증폭 부위, 품급
+    // 세트·장비 요약: 세트 포인트, 강화·증폭 합계, 증폭 부위, 품급, 마법부여
     var lines = s.sets.map(function (set) {
       return [set.name + ' (' + set.rarity + ')', set.point != null ? '세트 포인트 ' + fmt(set.point) + ' / ' + fmt(set.max) : ''];
     });
     var eq = s.equipment;
+    var bySlot = {};
+    eq.forEach(function (e) { bySlot[e.slot] = e; });
     var sum = eq.reduce(function (a, e) { return a + e.reinforce; }, 0);
     var amplified = eq.filter(function (e) { return e.amplified; }).length;
     var best = eq.filter(function (e) { return e.grade === '최상급'; }).length;
+    var enchanted = DyEquip.ENCHANT_SLOTS.filter(function (slot) { return bySlot[slot] && bySlot[slot].enchant.length; }).length;
     lines.push(['강화·증폭 합계 +' + sum, '증폭 ' + amplified + ' / ' + eq.length + '부위 · 최상급 ' + best + '부위']);
-    if (s.title) lines.push(['칭호', s.title]);
+    lines.push(['마법부여 ' + enchanted + ' / ' + DyEquip.ENCHANT_SLOTS.length + '부위', '방어구 · 악세사리 · 특수장비 기준']);
     $('specSummary').replaceChildren.apply($('specSummary'), lines.map(function (line) {
       var li = el('li');
       li.append(el('b', line[0]), document.createTextNode(line[1] ? ' · ' + line[1] : ''));
       return li;
     }));
 
-    $('specEquipment').replaceChildren.apply($('specEquipment'), eq.map(function (e) {
-      var tr = el('tr');
-      tr.append(
-        el('td', e.slot),
-        el('td', e.name, 'item rarity-' + e.rarity),
-        el('td', (e.amplified ? '증폭 +' : '강화 +') + e.reinforce, e.amplified ? 'ok' : ''),
-        el('td', e.refine ? '+' + e.refine : '-', e.refine ? '' : 'muted'),
-        el('td', e.grade || '-', e.grade === '최상급' ? 'ok' : ''),
-        el('td', e.tune || '-', e.tune ? '' : 'muted')
-      );
-      return tr;
+    // 장비창
+    $('specEquipment').replaceChildren.apply($('specEquipment'), EQUIP_GROUPS.map(function (groups) {
+      var col = el('div', null, 'eq-col');
+      groups.forEach(function (group) {
+        var section = el('section', null, 'eq-group');
+        section.append(el('h4', group[0]));
+        group[1].forEach(function (slot) {
+          section.append(slot === 'TITLE' ? gradedRow(s.title, '칭호') : slotRow(bySlot[slot], slot));
+        });
+        col.append(section);
+      });
+      return col;
     }));
 
-    // 기타: 크리처·아티팩트, 오라, 플래티넘 엠블렘, 안개 동화
+    // 크리처(아티팩트) · 오라 · 아바타(플래티넘 엠블렘) · 안개 동화
     var cr = s.creature;
-    var etc = [
-      ['크리처', cr ? cr.name + ' (' + cr.rarity + ')' : '-'],
-      ['아티팩트', cr && cr.artifacts.length ? cr.artifacts.map(function (a) { return a.name; }).join(', ') : '-'],
-      ['오라', s.aura || '-'],
-      ['플래티넘 엠블렘', s.platinum.length ? s.platinum.join(', ') : '-'],
-      ['안개 동화', s.mist ? 'Lv.' + s.mist.level + ' (' + s.mist.rate + ')' : '-']
-    ];
-    $('specEtc').replaceChildren.apply($('specEtc'), etc.map(function (e) { return fact(e[0], e[1]); }));
+    var av = s.avatar;
+    $('specEtc').replaceChildren(
+      gradedRow(cr, '크리처', cr && cr.artifacts.length ? '아티팩트 ' + cr.artifacts.map(function (a) { return a.name; }).join(', ') : ''),
+      gradedRow(s.aura, '오라'),
+      equipRow({ id: null, name: '레어 ' + av.rare + ' / ' + av.total + '부위', rarity: av.rare === av.total ? '레어' : '' },
+        '아바타', av.platinum.length ? av.platinum.join(', ') : '플래티넘 엠블렘 없음'),
+      equipRow(s.mist ? { id: null, name: 'Lv.' + s.mist.level, rarity: '' } : null, '안개 동화', s.mist ? s.mist.rate : '')
+    );
+  }
+
+  // 장비창 묶음: 왼쪽 열(무기·칭호, 방어구), 오른쪽 열(악세사리, 특수장비)
+  var EQUIP_GROUPS = [
+    [['무기 · 칭호', ['WEAPON', 'TITLE']], ['방어구', DyEquip.ARMOR]],
+    [['악세사리', DyEquip.ACCESSORY], ['특수장비', DyEquip.SPECIAL]]
+  ];
+
+  // 장비 한 부위: 강화·증폭 배지 + 마법부여 (무기는 품급·조율도)
+  function slotRow(e, slot) {
+    if (!e) return equipRow(null, DyEquip.SLOT_NAMES[slot]);
+    var enchant = e.enchant.length ? DyEquip.enchantText(e.enchant) : '';
+    var needsEnchant = DyEquip.ENCHANT_SLOTS.indexOf(slot) >= 0;
+    var sub = [enchant || (needsEnchant ? '마법부여 없음' : '')];
+    if (slot === 'WEAPON') sub.push(e.grade, e.tune ? '조율 ' + e.tune : '');
+    var badge = [(e.amplified ? '증폭 +' : '+') + e.reinforce + (e.refine ? ' · 제련 ' + e.refine : ''), e.amplified ? 'amp' : ''];
+    var row = equipRow(e, DyEquip.SLOT_NAMES[slot], sub.filter(Boolean).join(' · '), badge);
+    if (needsEnchant && !enchant) row.classList.add('no-enchant');
+    // 마법부여 등급 (rules.ts 기준이 있는 부위만)
+    if (e.enchantGrade) row.querySelector('.eq-name').append(el('em', e.enchantGrade, 'eq-grade grade-' + e.enchantGrade));
+    return row;
+  }
+
+  // 칭호·크리처·오라: 옵션(+ extra) + 등급 (rules.ts TITLE_GRADES / CREATURE_GRADES / AURA_GRADES)
+  function gradedRow(item, label, extra) {
+    var sub = [item && item.options.length ? DyEquip.enchantText(item.options) : '', extra].filter(Boolean).join(' · ');
+    var row = equipRow(item, label, sub);
+    if (item && item.grade) row.querySelector('.eq-name').append(el('em', item.grade, 'eq-grade grade-' + item.grade));
+    return row;
+  }
+
+  // 아이콘 + (이름·배지, '부위 보조' 줄) 한 줄. 잘린 글은 마우스를 올리면 전부 보인다
+  function equipRow(item, label, sub, badge) {
+    var row = el('div', null, 'eq-row');
+    var icon = el('div', null, 'eq-icon' + (item ? ' rarity-' + item.rarity : ''));
+    if (item && item.id) {
+      var img = el('img');
+      img.src = DyEquip.iconUrl(item.id);
+      img.alt = '';
+      icon.append(img);
+    }
+    var body = el('div', null, 'eq-body');
+    var name = el('div', null, 'eq-name');
+    name.append(el('span', item ? item.name : '미착용', item ? 'rarity-' + item.rarity : 'muted'));
+    if (badge) name.append(el('em', badge[0], 'eq-badge' + (badge[1] ? ' ' + badge[1] : '')));
+    var line = el('div', null, 'eq-sub');
+    line.append(el('b', label), document.createTextNode(sub ? ' ' + sub : ''));
+    body.append(name, line);
+    row.title = (item ? item.name : label) + (sub ? '\n' + sub : '');
+    row.append(icon, body);
+    return row;
   }
 
   form.addEventListener('submit', function (event) {

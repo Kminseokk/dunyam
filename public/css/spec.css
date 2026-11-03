@@ -37,10 +37,50 @@
   .stats .spec-lines { margin: 0 0 10px; padding: 0; list-style: none; font-size: 14px; color: #c8c8c8; }
     .stats .spec-lines li { padding: 2px 0; }
     .stats .spec-lines b { color: #fff; }
-  .stats table.spec-table td { padding: 6px 8px; }
-  .stats .spec-etc dd { white-space: normal; }
+
+/* 장비창: 아이콘(테두리는 등급 색) + 이름·강화 배지 + '부위 마법부여' 줄 */
+.stats .eq-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.stats .eq-group h4 { margin: 10px 0 4px; font-size: 12px; font-weight: 700; color: #8a8f98; }
+.stats .eq-etc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.stats .eq-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; min-width: 0; }
+.stats .eq-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #3a3f48;
+  border-radius: 6px;
+  background: #15171c; }
+  .stats .eq-icon img { display: block; width: 28px; height: 28px; }
+  .stats .eq-icon.rarity-레어 { border-color: #b36bff; }
+  .stats .eq-icon.rarity-유니크 { border-color: #ff00ff; }
+  .stats .eq-icon.rarity-레전더리 { border-color: #ff7800; }
+  .stats .eq-icon.rarity-에픽 { border-color: #ffb400; }
+  .stats .eq-icon.rarity-태초 { border-color: #4cf0c4; }
+.stats .eq-body { min-width: 0; line-height: 1.35; }
+.stats .eq-name { display: flex; align-items: baseline; gap: 6px; font-size: 13px; font-weight: 700; color: #fff; }
+  .stats .eq-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats .eq-badge {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #2d313a;
+  font-size: 11px;
+  font-style: normal;
+  color: #ddd; }
+  .stats .eq-badge.amp { background: #3b2a5c; color: #c9a6ff; }
+/* 마법부여 등급 */
+.stats .eq-grade { flex-shrink: 0; padding: 0 5px; border-radius: 4px; font-size: 11px; font-style: normal; color: #fff; }
+  .stats .eq-grade.grade-종결 { background: #1c7ed6; }
+  .stats .eq-grade.grade-준종결 { background: #e03131; }
+  .stats .eq-grade.grade-보급 { background: #495057; }
+  .stats .eq-grade.grade-없음 { border: 1px solid #495057; background: transparent; color: #8a8f98; }
+.stats .eq-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #c8c8c8; }
+  .stats .eq-sub b { font-weight: 400; color: #8a8f98; }
+.stats .no-enchant .eq-sub { color: #ff6b6b; }
+.stats .eq-row .muted { color: #6c717a; }
 
 @media (max-width: 767px) {
   .stats .calc-summary.spec-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 575px) {
-  .stats .spec-profile { grid-template-columns: minmax(0, 1fr); } }
+  .stats .spec-profile { grid-template-columns: minmax(0, 1fr); }
+  .stats .eq-columns, .stats .eq-etc { grid-template-columns: minmax(0, 1fr); } }
