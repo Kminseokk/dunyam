@@ -428,7 +428,7 @@ function equipView(
   const avatars = avatar.avatar ?? [];
   const parts = avatars.filter((a) => AVATAR_SLOTS.includes(a.slotId));
 
-  return {
+  const view = {
     equipment: list.filter((e) => e.slotId !== 'TITLE').map((e) => ({
       slot: e.slotId,
       ...item(e)!,
@@ -468,6 +468,33 @@ function equipView(
       platinum: platinumEmblems(avatar),
     },
   };
+  return { ...view, allBlue: allBlueOf(view) };
+}
+
+// 올 블루 판정에 쓰는 마법부여 부위 이름 (ENCHANT_GRADES 의 12부위)
+const ENCHANT_SLOT_NAMES: Record<string, string> = {
+  WEAPON: '무기', SHOULDER: '머리어깨', JACKET: '상의', PANTS: '하의', WAIST: '벨트', SHOES: '신발',
+  WRIST: '팔찌', AMULET: '목걸이', RING: '반지', SUPPORT: '보조장비', MAGIC_STON: '마법석', EARRING: '귀걸이',
+};
+
+// 올 블루: 마법부여(등급 기준이 있는 12부위)·칭호·크리처·오라가 모두 종결이면 달성. missing 은 종결이 아닌 항목
+type Graded = { grade: string | null } | null;
+function allBlueOf(view: {
+  equipment: { slot: string; enchantGrade: string | null }[];
+  title: Graded;
+  creature: Graded;
+  aura: Graded;
+}) {
+  const missing: string[] = [];
+  for (const slot of Object.keys(ENCHANT_GRADES)) {
+    const e = view.equipment.find((x) => x.slot === slot);
+    if (e?.enchantGrade !== '종결') missing.push(`${ENCHANT_SLOT_NAMES[slot]} 마법부여 · ${e ? (e.enchantGrade ?? '-') : '미착용'}`);
+  }
+  const items = [['칭호', view.title], ['크리처', view.creature], ['오라', view.aura]] as const;
+  for (const [label, it] of items) {
+    if (it?.grade !== '종결') missing.push(`${label} · ${it ? (it.grade ?? '-') : '미착용'}`);
+  }
+  return { done: !missing.length, missing };
 }
 
 // ─── 모험단 장비 보기: 캐릭터 한 명의 장비 (네오플 API 3회 + 오라·크리처·칭호 옵션 3회, 옵션은 캐시) ───

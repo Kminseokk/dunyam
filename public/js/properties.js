@@ -161,27 +161,14 @@
 
   var EQUIP_COLUMNS = 6; // 명성 다음 칸 수 (불러오는 중 / 오류 안내가 차지)
 
-  // 올 블루: 마법부여(무기 + 11부위)·칭호·크리처·오라가 모두 종결이면 달성.
-  // 마우스를 올리면 종결이 아닌 항목을 보여 준다
-  function allBlueCell(eq, bySlot) {
-    var missing = [];
-    ICON_GROUPS.forEach(function (slots) {
-      slots.forEach(function (slot) {
-        var e = bySlot[slot];
-        var grade = e ? e.enchantGrade : '미착용';
-        if (grade !== '종결') missing.push(SLOT_NAMES[slot] + ' 마법부여 · ' + (grade || '-'));
-      });
-    });
-    [['칭호', eq.title], ['크리처', eq.creature], ['오라', eq.aura]].forEach(function (pair) {
-      var grade = pair[1] ? pair[1].grade : '미착용';
-      if (grade !== '종결') missing.push(pair[0] + ' · ' + (grade || '-'));
-    });
-    var done = !missing.length;
+  // 올 블루: 서버가 판정한 결과(마법부여 12부위·칭호·크리처·오라 모두 종결)를 보여 준다.
+  // 마우스를 올리면 종결이 아닌 항목
+  function allBlueCell(allBlue) {
     var td = el('td');
-    var label = el('span', done ? '달성' : '미달성', 'eq-allblue' + (done ? ' done' : ''));
-    label.dataset.tip = done ? '모두 종결' : '종결이 아닌 항목\n' + missing.join('\n');
+    var label = el('span', allBlue.done ? '달성' : '미달성', 'eq-allblue' + (allBlue.done ? ' done' : ''));
+    label.dataset.tip = allBlue.done ? '모두 종결' : '종결이 아닌 항목\n' + allBlue.missing.join('\n');
     td.append(label);
-    return { td: td, done: done };
+    return td;
   }
 
   function equipRow(c) {
@@ -223,8 +210,7 @@
     });
     cells.push(sets);
 
-    var allBlue = allBlueCell(eq, bySlot);
-    cells.push(allBlue.td);
+    cells.push(allBlueCell(eq.allBlue));
 
     // 장비 / 마법부여: 무기·방어구·악세사리·특수장비를 한 칸에, 묶음 사이는 조금 띄운다
     var gear = el('td');
@@ -245,7 +231,7 @@
       itemCell(aura, aura && aura.grade ? gradeLabel(aura.grade, '오라 옵션', aura.options) : null));
 
     row.rest.replaceWith.apply(row.rest, cells);
-    return allBlue.done;
+    return eq.allBlue.done;
   }
 
   // 등급 칸(data-tip)에 마우스를 올리면 칸 위에 옵션 상자를 띄운다. 위 공간이 모자라면 아래로

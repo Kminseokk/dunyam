@@ -6,6 +6,17 @@
 
 ## [Unreleased]
 
+## [2026-11-04]
+
+### Added
+- 올 블루 저장: 모험단을 검색해 `/api/equip`으로 장비를 불러올 때 서버가 판정한 올 블루 여부를 DB에 저장 (값이 바뀐 경우에만)
+  - `characters.all_blue`, `adventures.allblue_count` (migration 0009)
+- 명예의 전당 '올 블루 최다 모험단' 카드 ('아직 공개되지 않은 정보' 자리)
+- 랭킹 '올 블루' 탭 (`/rank/allblue`, 달성 캐릭터가 있는 모험단만)
+
+### Changed
+- 올 블루 판정을 브라우저에서 서버로 옮김 (`/api/equip` 응답의 `allBlue`)
+
 ## [2026-11-03]
 
 ### Added

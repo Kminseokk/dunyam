@@ -115,6 +115,22 @@ function purgeRankingCache(request: Request, ctx: ExecutionContext) {
   ctx.waitUntil(Promise.all(urls.map((u) => caches.default.delete(new Request(u)))));
 }
 
+// 올 블루 달성 여부 저장 (모험단 페이지가 /api/equip 으로 장비를 불러올 때 서버가 판정한 값).
+// 등록된 캐릭터이고 값이 바뀐 경우에만 쓰고, 그 모험단 요약과 명예의 전당·랭킹 캐시를 갱신한다
+async function saveAllBlue(db: D1Database, request: Request, ctx: ExecutionContext, uid: string, done: boolean) {
+  const flag = done ? 1 : 0;
+  const { results } = await db
+    .prepare(`SELECT adventure_name FROM characters WHERE character_uid = ?1 AND all_blue IS NOT ?2`)
+    .bind(uid, flag)
+    .all<{ adventure_name: string }>();
+  if (!results.length) return;
+  await db.batch([
+    db.prepare(`UPDATE characters SET all_blue = ?2 WHERE character_uid = ?1`).bind(uid, flag),
+    ...results.flatMap((r) => refreshAdventureStatements(db, r.adventure_name)),
+  ]);
+  purgeRankingCache(request, ctx);
+}
+
 // 이름으로 캐릭터를 찾아 해당 모험단 소속인 캐릭터를 반환.
 // 이미 등록된 캐릭터들의 서버를 먼저 찾고(보통 2회 호출), 없을 때만 전 서버를 검색한다.
 async function findMember(env: Env, adventure: string, name: string) {
@@ -190,6 +206,7 @@ async function getHighlights(env: Env) {
     topFameSum: rankingQuery('fame-sum', 1),
     topFameAvg: rankingQuery('fame-avg', 1),
     topMikaela: rankingQuery('mikaela', 1),
+    topAllBlue: rankingQuery('allblue', 1),
     topCount: rankingQuery('count', 1),
   };
   const keys = Object.keys(queries) as (keyof typeof queries)[];
@@ -254,8 +271,11 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
     const id = params.get('id') ?? '';
     if (!SERVER_IDS.includes(server)) throw new BadRequest('server 값이 올바르지 않습니다.');
     if (!/^[0-9a-f]{32}$/.test(id)) throw new BadRequest('id 값이 올바르지 않습니다.');
-    return edgeCached(request, ctx, EQUIP_TTL, async () =>
-      json({ ok: true, equip: await getEquipView(env.NEOPLE_API_KEY, server, id) }));
+    return edgeCached(request, ctx, EQUIP_TTL, async () => {
+      const equip = await getEquipView(env.NEOPLE_API_KEY, server, id);
+      ctx.waitUntil(saveAllBlue(env.DB, request, ctx, id, equip.allBlue.done));
+      return json({ ok: true, equip });
+    });
   }
 
   // 강화/증폭 기록: 구간 하나(최대 UPGRADE_MAX_DAYS 일). 브라우저가 구간을 나눠 차례로 요청한다

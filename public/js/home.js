@@ -23,6 +23,9 @@
     topMikaela: function (r) {
       return { value: r.adventure_name, sub: '합계 ' + fmt(r.value) + '회 · ' + r.count + '캐릭터' };
     },
+    topAllBlue: function (r) {
+      return { value: r.adventure_name, sub: '올 블루 ' + fmt(r.value) + '캐릭터 · ' + r.count + '캐릭터 중' };
+    },
     topCount: function (r) {
       return { value: r.value + '캐릭터', sub: r.adventure_name };
     }
