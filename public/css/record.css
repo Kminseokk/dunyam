@@ -54,6 +54,9 @@
 .stats .rarity-에픽 { color: #ffb400; }
 .stats .rarity-태초 { color: #4cf0c4; }
 
+/* 아이템별 요약 / 전체 기록 탭 (탭 모양은 statistics.css 의 .stats-tabs) */
+.stats .rec-tabs-head { margin-bottom: 12px; }
+
 /* 필터 */
 .stats .rec-filter { display: flex; gap: 4px; }
   .stats .rec-filter button {

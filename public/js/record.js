@@ -10,7 +10,7 @@
   };
   var TYPES = { enhance: '강화', amplify: '증폭' };
   var CONCURRENCY = 3;
-  var PAGE_SIZE = 50; // 전체 기록 표에 한 번에 보여 줄 줄 수
+  var PAGE_SIZE = 15; // 아이템별 요약·전체 기록 표에 한 번에 보여 줄 줄 수 (나머지는 더 보기)
   var DAY = 86400000;
 
   function $(id) { return document.getElementById(id); }
@@ -125,6 +125,7 @@
       .filter(Boolean).join(' · ');
     renderSummary();
     renderItems();
+    showPanel('itemsPanel');
     filter = 'all';
     document.querySelectorAll('#filter button').forEach(function (b) { b.classList.toggle('active', b.dataset.type === 'all'); });
     renderLog(true);
@@ -149,7 +150,9 @@
     }));
   }
 
-  // 아이템별 요약 (같은 이름·종류끼리, 시도 많은 순)
+  // 아이템별 요약 (같은 이름·종류끼리, 시도 많은 순, PAGE_SIZE 줄씩 더 보기)
+  var itemGroups = [];
+  var itemsShown = 0;
   function renderItems() {
     var groups = {};
     records.forEach(function (r) {
@@ -161,19 +164,23 @@
       if (r.ticket) g.ticket++;
       if (r.date > g.last) g.last = r.date;
     });
-    var rows = Object.keys(groups).map(function (k) { return groups[k]; })
+    itemGroups = Object.keys(groups).map(function (k) { return groups[k]; })
       .sort(function (a, b) { return b.total - a.total; });
-    var tbody = $('itemRows');
-    tbody.replaceChildren();
-    if (!rows.length) {
+    itemsShown = 0;
+    $('itemRows').replaceChildren();
+    if (!itemGroups.length) {
       var empty = el('tr');
       var td = el('td', '강화·증폭 기록이 없습니다.', 'muted');
       td.colSpan = 9;
       empty.append(td);
-      tbody.append(empty);
-      return;
+      $('itemRows').append(empty);
     }
-    rows.forEach(function (g) {
+    renderItemRows();
+  }
+
+  function renderItemRows() {
+    var tbody = $('itemRows');
+    itemGroups.slice(itemsShown, itemsShown + PAGE_SIZE).forEach(function (g) {
       var tr = el('tr');
       tr.append(
         el('td', g.r.item, 'item rarity-' + g.r.rarity),
@@ -188,6 +195,8 @@
       );
       tbody.append(tr);
     });
+    itemsShown += PAGE_SIZE;
+    $('itemsMoreBtn').hidden = itemsShown >= itemGroups.length;
   }
 
   // ─── 기댓값 대비 손익 ───
@@ -437,6 +446,23 @@
     $('moreBtn').hidden = shown >= list.length;
   }
 
+  // 아이템별 요약 / 전체 기록 탭. 강화·증폭 필터는 전체 기록 탭에서만 보인다
+  function showPanel(id) {
+    document.querySelectorAll('#recTabs a').forEach(function (a) {
+      var on = a.dataset.panel === id;
+      a.classList.toggle('active', on);
+      $(a.dataset.panel).hidden = !on;
+    });
+    $('filter').hidden = id !== 'logPanel';
+  }
+  $('recTabs').addEventListener('click', function (event) {
+    var a = event.target.closest('a');
+    if (!a) return;
+    event.preventDefault();
+    showPanel(a.dataset.panel);
+  });
+
+  $('itemsMoreBtn').addEventListener('click', renderItemRows);
   $('moreBtn').addEventListener('click', function () { renderLog(false); });
   $('filter').addEventListener('click', function (event) {
     var button = event.target.closest('button');
