@@ -33,6 +33,10 @@
 /* 요약 카드 4칸 */
 .stats .calc-summary.rec-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .stats .rec-summary em { display: block; margin-top: 2px; font-style: normal; font-size: 12px; color: #8a8f98; }
+  /* 손익: 이득 파랑, 손해 빨강 */
+  .stats .rec-summary strong.gain { color: #4a90ff; }
+  .stats .rec-summary strong.loss { color: #ff6b6b; }
+.stats .rec-subtitle { margin: 20px 0 8px; font-size: 15px; }
 
 /* 기록 표 */
 .stats table.rec-table th, .stats table.rec-table td { text-align: center; white-space: nowrap; }

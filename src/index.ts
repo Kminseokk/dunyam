@@ -10,7 +10,9 @@ import {
   UPGRADE_MAX_DAYS,
   UPGRADE_START,
   getCharacterDetail,
+  ITEM_PARTS_MAX,
   getEquipView,
+  getItemParts,
   getSpec,
   getUpgradeRecords,
   getWeeklyClears,
@@ -276,6 +278,15 @@ async function api(request: Request, env: Env, path: string, ctx: ExecutionConte
       ctx.waitUntil(saveAllBlue(env.DB, request, ctx, id, equip.allBlue.done));
       return json({ ok: true, equip });
     });
+  }
+
+  // 강화/증폭 기록 손익: 아이템 부위 (무기 / 그 외). 브라우저가 ITEM_PARTS_MAX 개씩 나눠 요청한다
+  if (request.method === 'GET' && path === '/api/record/parts') {
+    const ids = (new URL(request.url).searchParams.get('ids') ?? '').split(',').filter(Boolean);
+    if (!ids.length || ids.length > ITEM_PARTS_MAX || ids.some((id) => !/^[0-9a-f]{32}$/.test(id))) {
+      throw new BadRequest(`ids 는 아이템 id ${ITEM_PARTS_MAX}개 이하여야 합니다.`);
+    }
+    return json({ ok: true, parts: await getItemParts(env.NEOPLE_API_KEY, ids) });
   }
 
   // 강화/증폭 기록: 구간 하나(최대 UPGRADE_MAX_DAYS 일). 브라우저가 구간을 나눠 차례로 요청한다

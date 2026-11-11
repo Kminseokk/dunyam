@@ -72,6 +72,22 @@
             <div class="calc-summary rec-summary" id="summary"></div>
           </section>
 
+          <!-- 기댓값 대비 손익 (record.js, 확률·비용은 기댓값 계산기와 같은 기본 표) -->
+          <section class="calc-box" id="profitBox">
+            <h2 class="stats-table-title">기댓값 대비 손익</h2>
+            <p class="calc-hint" id="profitStatus"></p>
+            <div class="calc-summary rec-summary" id="profitSummary"></div>
+            <div id="profitChartBox">
+              <h3 class="stats-table-title rec-subtitle">단계별 성공률</h3>
+              <div class="stats-chart calc-chart"><canvas id="stepChart"></canvas></div>
+            </div>
+            <p class="calc-hint">
+              손익 = 시도 후 수치의 평균 가치 − 시도 전 수치의 평균 가치 − 시도 비용 입니다. 평균적인 운이면 0에 가깝고, +면 평균보다 이득입니다.
+              확률·비용은 기댓값 계산기의 기본 표(100레벨 장비 기준)이며 이벤트·보호권 가격은 반영하지 않습니다.
+              안전 강화·증폭과 강화권·증폭권 사용 기록(여러 단계를 한 번에 시도한 기록 포함)은 계산에서 제외합니다.
+            </p>
+          </section>
+
           <section class="calc-box">
             <h2 class="stats-table-title">아이템별 요약</h2>
             <div class="stats-table-wrap">
@@ -125,6 +141,8 @@
       </div>
     </div>
 
+    <script src="/assets/js/chartjs.min.js"></script>
+    <script src="/js/upgrade.js"></script>
     <script src="/js/record.js"></script>
   </body>
 </html>

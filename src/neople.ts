@@ -193,6 +193,7 @@ const UPGRADE_MAX_PAGES = 20; // 구간 하나당 최대 2,000건
 export interface UpgradeRecord {
   date: string;
   type: 'enhance' | 'amplify';
+  itemId: string;
   item: string;
   rarity: string;
   before: number;
@@ -209,6 +210,7 @@ interface UpgradeTimeline {
       code: number;
       date: string;
       data: {
+        itemId: string;
         itemName: string;
         itemRarity: string;
         before: number;
@@ -248,6 +250,7 @@ export async function getUpgradeRecords(
       records.push({
         date: row.date,
         type: row.code === 401 ? 'enhance' : 'amplify',
+        itemId: d.itemId,
         item: d.itemName,
         rarity: d.itemRarity,
         before: d.before,
@@ -392,6 +395,26 @@ async function getItemOptions(apiKey: string, itemId: string, passive: string): 
   }
   await caches.default.put(key, new Response(JSON.stringify(options), { headers: { 'Cache-Control': `public, max-age=${ITEM_TTL}` } }));
   return options;
+}
+
+// ─── 아이템 부위 (강화/증폭 기록 손익 계산용) ───
+// 무기 / 그 외(방어구·악세서리·특수장비). 비용과 실패 결과가 부위에 따라 다르다. 바뀌지 않으므로 아이템별로 오래 캐시
+export const ITEM_PARTS_MAX = 15; // 요청 한 번에 조회할 아이템 수 (캐시 조회·저장도 외부 호출로 세어 여유 있게)
+
+async function getItemPart(apiKey: string, itemId: string): Promise<'weapon' | 'armor'> {
+  const key = new Request(`${API}/items/${enc(itemId)}?part`);
+  const hit = await caches.default.match(key);
+  if (hit) return (await hit.text()) === 'weapon' ? 'weapon' : 'armor';
+  const detail = await call<{ itemType?: string }>(apiKey, `/items/${enc(itemId)}`);
+  const part = detail.itemType === '무기' ? 'weapon' : 'armor';
+  await caches.default.put(key, new Response(part, { headers: { 'Cache-Control': `public, max-age=${ITEM_TTL}` } }));
+  return part;
+}
+
+// { 아이템 id: 'weapon' | 'armor' | null(조회 실패) }
+export async function getItemParts(apiKey: string, itemIds: string[]) {
+  const parts = await Promise.all(itemIds.map((id) => getItemPart(apiKey, id).catch(() => null)));
+  return Object.fromEntries(itemIds.map((id, i) => [id, parts[i]]));
 }
 
 // 착용한 오라·크리처·칭호의 옵션 (없거나 조회에 실패하면 null → 등급 없음)

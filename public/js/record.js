@@ -98,6 +98,7 @@
       records = [].concat.apply([], results).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
       progress(1, 1, '완료: ' + list.length + '개 구간, 기록 ' + fmt(records.length) + '건');
       render(c);
+      renderProfit(current);
     } catch (e) {
       if (current !== job) return;
       $('progressBox').hidden = true;
@@ -186,6 +187,220 @@
         el('td', g.last.slice(0, 10))
       );
       tbody.append(tr);
+    });
+  }
+
+  // ─── 기댓값 대비 손익 ───
+  // 기댓값 계산기와 같은 확률·비용 표(/api/cost 기본값, 이벤트·보호권 가격·아이템 레벨 반영 없음)로
+  //   단계 가치 V[n] = 0 → +n 까지의 평균 비용(골드·재료 따로)을 구하고
+  //   시도 한 번의 손익 = V[시도 후 수치] − V[시도 전 수치] − 이번 시도 비용 으로 계산한다.
+  //   (실패 기록의 after 는 시도한 수치라서, 실패 후 수치는 표의 실패 결과로 구한다)
+  //   확률대로라면 시도 한 번의 손익 평균은 정확히 0 → 합계가 + 면 평균보다 이득, − 면 손해
+  // 안전 강화·증폭과 강화권·증폭권 사용 기록은 비용 구조가 달라 제외한다.
+  var PART_CHUNK = 15; // /api/record/parts 한 번에 보내는 아이템 수 (서버 ITEM_PARTS_MAX)
+  var LUCK_TRIALS = 20000; // 운 백분위 시뮬레이션 횟수
+  var costTables = null; // { enhance|amplify: { material, parts: { weapon|armor: { steps, V, max } } } }
+  var partCache = {}; // 아이템 id → 'weapon' | 'armor' | null
+  var stepChart = null;
+
+  async function loadCostTables() {
+    if (costTables) return costTables;
+    var tables = {};
+    await Promise.all(['enhance', 'amplify'].map(async function (type) {
+      var data = await getJson('/api/cost?type=' + type);
+      var parts = {};
+      data.parts.forEach(function (p) {
+        var steps = DyUpgrade.toArrays(p.steps);
+        var D = DyUpgrade.stepCosts(steps, data.maxLevel, 0, 0);
+        var V = [{ gold: 0, material: 0 }];
+        for (var t = 1; t <= data.maxLevel; t++) {
+          V[t] = { gold: V[t - 1].gold + D[t].gold, material: V[t - 1].material + D[t].material };
+        }
+        parts[p.id] = { steps: steps, V: V, max: data.maxLevel };
+      });
+      tables[type] = { material: data.material, parts: parts };
+    }));
+    return (costTables = tables);
+  }
+
+  // 아이템 부위를 PART_CHUNK 개씩 나눠 조회 (이미 아는 아이템은 건너뜀)
+  async function loadParts(ids) {
+    var need = ids.filter(function (id) { return !(id in partCache); });
+    var chunks = [];
+    for (var i = 0; i < need.length; i += PART_CHUNK) chunks.push(need.slice(i, i + PART_CHUNK));
+    var next = 0;
+    async function worker() {
+      while (next < chunks.length) {
+        var data = await getJson('/api/record/parts?ids=' + chunks[next++].join(','));
+        Object.keys(data.parts).forEach(function (id) { partCache[id] = data.parts[id]; });
+      }
+    }
+    await Promise.all([worker(), worker(), worker()]);
+  }
+
+  // 기록 한 건 → 손익 계산용 값. 계산할 수 없으면 제외 사유('safe' | 'ticket' | 'other')
+  function evaluate(r) {
+    if (r.safe) return 'safe';
+    var t = r.before + 1;
+    // 여러 단계를 한 번에 시도한 기록(예: +7 → +11)은 사용권 기록에 사용권 이름이 빠진 경우라 사용권으로 센다
+    if (r.ticket || r.after !== t) return 'ticket';
+    var part = partCache[r.itemId];
+    var table = part && costTables[r.type].parts[part];
+    if (!table || t > table.max) return 'other';
+    var s = table.steps, V = table.V;
+    var failLevel = DyUpgrade.levelAfterFail(s, t, 0);
+    function gain(level) {
+      return {
+        gold: V[level].gold - V[r.before].gold - s.gold[t],
+        material: V[level].material - V[r.before].material - s.material[t]
+      };
+    }
+    return { key: r.type + '|' + part + '|' + t, type: r.type, t: t, p: s.rate[t], ok: gain(t), ng: gain(failLevel), result: r.result };
+  }
+
+  async function renderProfit(current) {
+    $('profitStatus').textContent = '손익을 계산하는 중...';
+    $('profitSummary').replaceChildren();
+    $('profitChartBox').hidden = true;
+    try {
+      await loadCostTables();
+      await loadParts(records.filter(function (r) { return !r.safe && !r.ticket && r.after === r.before + 1; })
+        .map(function (r) { return r.itemId; })
+        .filter(function (id, i, all) { return all.indexOf(id) === i; }));
+    } catch (e) {
+      if (current === job) $('profitStatus').textContent = '손익을 계산하지 못했습니다. (' + (e.message || '오류') + ')';
+      return;
+    }
+    if (current !== job) return;
+
+    var total = { enhance: { gold: 0, material: 0, n: 0 }, amplify: { gold: 0, material: 0, n: 0 } };
+    var excluded = { safe: 0, ticket: 0, other: 0 };
+    var groups = {}; // 같은 종류·부위·단계 시도 묶음 (운 백분위 시뮬레이션용)
+    var steps = {}; // 종류·단계별 실제 성공률 (차트용)
+    records.forEach(function (r) {
+      var v = evaluate(r);
+      if (typeof v === 'string') { excluded[v]++; return; }
+      var got = v.result ? v.ok : v.ng;
+      total[v.type].gold += got.gold;
+      total[v.type].material += got.material;
+      total[v.type].n++;
+      var g = groups[v.key] || (groups[v.key] = { n: 0, p: v.p, ok: v.ok.gold, ng: v.ng.gold });
+      g.n++;
+      var sk = v.type + '|' + v.t;
+      var st = steps[sk] || (steps[sk] = { type: v.type, t: v.t, p: v.p, n: 0, ok: 0 });
+      st.n++;
+      if (v.result) st.ok++;
+    });
+
+    var counted = total.enhance.n + total.amplify.n;
+    if (!counted) {
+      $('profitStatus').textContent = '손익을 계산할 기록이 없습니다.';
+      return;
+    }
+    $('profitStatus').textContent = '';
+    var actualGold = total.enhance.gold + total.amplify.gold;
+    var top = luckTop(groups, actualGold);
+
+    var cards = ['enhance', 'amplify'].map(function (type) {
+      var x = total[type];
+      if (!x.n) return [TYPES[type] + ' 손익', '-', '계산한 기록 없음', ''];
+      return [TYPES[type] + ' 손익', signedGold(x.gold),
+        costTables[type].material + ' ' + signed(Math.round(x.material)) + '개 · ' + fmt(x.n) + '회 기준', x.gold >= 0 ? 'gain' : 'loss'];
+    });
+    cards.push(['운 백분위', '상위 ' + fmtPct(top) + '%',
+      '같은 시도를 확률대로 다시 하면 ' + fmtPct(top) + '%만 이보다 좋은 결과 (골드 손익, ' + fmt(LUCK_TRIALS) + '회 시뮬레이션)',
+      top <= 50 ? 'gain' : 'loss']);
+    cards.push(['계산 제외', fmt(excluded.safe + excluded.ticket + excluded.other) + '회',
+      '안전 ' + fmt(excluded.safe) + ' · 사용권 ' + fmt(excluded.ticket) + ' · 기타 ' + fmt(excluded.other), '']);
+    $('profitSummary').replaceChildren.apply($('profitSummary'), cards.map(function (card) {
+      var div = el('div');
+      div.append(el('span', card[0]), el('strong', card[1], card[3]), el('em', card[2]));
+      return div;
+    }));
+
+    renderStepChart(Object.keys(steps).map(function (k) { return steps[k]; }));
+  }
+
+  function signed(n) { return (n > 0 ? '+' : '') + fmt(n); }
+  function signedGold(n) { return (n > 0 ? '+' : '') + DyUpgrade.fmtGold(n); }
+  function fmtPct(n) { return n < 1 ? n.toFixed(2) : n < 10 ? n.toFixed(1) : String(Math.round(n)); }
+
+  // 운 백분위: 같은 시도(종류·부위·단계별 횟수)를 확률대로 LUCK_TRIALS 번 다시 했을 때
+  // 실제 골드 손익 이상이 나오는 비율(%) → 작을수록 운이 좋았다
+  function luckTop(groups, actual) {
+    var list = Object.keys(groups).map(function (k) { return groups[k]; });
+    var better = 0;
+    for (var i = 0; i < LUCK_TRIALS; i++) {
+      var sum = 0;
+      list.forEach(function (g) {
+        var k = binomial(g.n, g.p);
+        sum += k * g.ok + (g.n - k) * g.ng;
+      });
+      if (sum >= actual - 1e-6) better++;
+    }
+    return (better / LUCK_TRIALS) * 100;
+  }
+
+  // 이항분포 표본: 분산이 크면 정규 근사, 작으면 확률을 차례로 누적 (성공이 많으면 실패 쪽으로 뒤집어 계산)
+  function binomial(n, p) {
+    if (p >= 1) return n;
+    if (p <= 0) return 0;
+    if (p > 0.5) return n - binomial(n, 1 - p);
+    var mean = n * p, variance = mean * (1 - p);
+    if (variance > 25) {
+      var z = Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
+      return Math.min(n, Math.max(0, Math.round(mean + Math.sqrt(variance) * z)));
+    }
+    var u = Math.random(), q = Math.pow(1 - p, n), cum = q, k = 0;
+    while (u > cum && k < n) {
+      q *= ((n - k) / (k + 1)) * (p / (1 - p));
+      k++;
+      cum += q;
+    }
+    return k;
+  }
+
+  // 단계별 실제 성공률(막대) vs 공식 확률(점). 확률 100% 단계는 뺀다
+  function renderStepChart(list) {
+    list = list.filter(function (s) { return s.p < 1; })
+      .sort(function (a, b) { return a.type === b.type ? a.t - b.t : a.type === 'enhance' ? -1 : 1; });
+    if (stepChart) { stepChart.destroy(); stepChart = null; }
+    $('profitChartBox').hidden = !list.length;
+    if (!list.length) return;
+    var actual = list.map(function (s) { return Math.round((s.ok / s.n) * 1000) / 10; });
+    stepChart = new Chart($('stepChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: list.map(function (s) { return TYPES[s.type] + ' +' + (s.t - 1) + '→+' + s.t; }),
+        datasets: [
+          {
+            type: 'bar', label: '실제 성공률', data: actual, maxBarThickness: 36, borderRadius: 4, order: 1,
+            backgroundColor: list.map(function (s, i) { return actual[i] >= s.p * 100 ? 'rgba(74, 144, 255, 0.8)' : 'rgba(255, 107, 107, 0.8)'; })
+          },
+          {
+            type: 'line', label: '공식 확률', data: list.map(function (s) { return Math.round(s.p * 1000) / 10; }),
+            showLine: false, pointStyle: 'line', pointRadius: 14, pointBorderWidth: 3, borderColor: '#ffd43b', backgroundColor: '#ffd43b',
+            order: 0 // 막대 위에 그린다
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#c8c8c8' } },
+          tooltip: {
+            callbacks: {
+              label: function (c) { return c.dataset.label + ' ' + c.parsed.y + '%'; },
+              afterBody: function (items) { var s = list[items[0].dataIndex]; return fmt(s.n) + '회 중 ' + fmt(s.ok) + '회 성공'; }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#aaa' }, grid: { display: false } },
+          y: { beginAtZero: true, max: 100, ticks: { color: '#aaa', callback: function (v) { return v + '%'; } }, grid: { color: 'rgba(255, 255, 255, 0.08)' } }
+        }
+      }
     });
   }
 
